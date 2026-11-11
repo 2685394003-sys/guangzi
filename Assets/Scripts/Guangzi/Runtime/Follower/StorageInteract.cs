@@ -13,6 +13,7 @@ namespace Guangzi.Runtime
         [Header("引用")]
         [SerializeField] private Chest chest;
         [SerializeField] private ChestWindow window;
+        [SerializeField] private GridCamera targetCamera;
 
         [Tooltip("靠近时显示的 HUD 提示")]
         [SerializeField] private GameObject hintRoot;
@@ -44,6 +45,17 @@ namespace Guangzi.Runtime
 
         private void Update()
         {
+            // 箱子交互同样只属于角色视角。
+            // 上帝视角下走近箱子不该冒提示，右键也不该被它截走。
+            if (targetCamera == null) targetCamera = FindFirstObjectByType<GridCamera>();
+
+            if (targetCamera != null && !targetCamera.IsCharacterView)
+            {
+                IsPlayerNear = false;
+                UpdateHint();
+                return;
+            }
+
             IsPlayerNear = ComputeNear();
             UpdateHint();
         }
@@ -87,6 +99,9 @@ namespace Guangzi.Runtime
         public bool TryInteract()
         {
             if (window == null) return false;
+
+            // 双保险：上帝视角下不接这次右键
+            if (targetCamera != null && !targetCamera.IsCharacterView) return false;
             if (!IsPlayerNear) return false;
 
             if (window.IsOpen) return true;

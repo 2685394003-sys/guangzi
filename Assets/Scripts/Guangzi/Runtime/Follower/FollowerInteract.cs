@@ -17,6 +17,7 @@ namespace Guangzi.Runtime
         [Header("引用")]
         [SerializeField] private FollowerController follower;
         [SerializeField] private FollowerPanelUI panel;
+        [SerializeField] private GridCamera targetCamera;
 
         [Tooltip("靠近时显示的 HUD 提示，留空则不显示")]
         [SerializeField] private GameObject hintRoot;
@@ -51,6 +52,19 @@ namespace Guangzi.Runtime
 
         private void Update()
         {
+            // 随从交互是**角色视角独有**的。
+            // 上帝视角是「指挥模式」，右键要留给清空手持 / 拖镜头，
+            // 不能再被「打开随从面板」截胡，否则两种视角的右键语义会打架。
+            if (targetCamera == null) targetCamera = FindFirstObjectByType<GridCamera>();
+
+            if (targetCamera != null && !targetCamera.IsCharacterView)
+            {
+                _nearFollower = null;
+                IsPlayerNear = false;
+                UpdateHint();
+                return;
+            }
+
             _nearFollower = FindNearest();
             IsPlayerNear = _nearFollower != null;
             UpdateHint();
@@ -112,6 +126,10 @@ namespace Guangzi.Runtime
         public bool TryInteract()
         {
             if (panel == null) return false;
+
+            // 双保险：Update 里已经把 IsPlayerNear 置 false，
+            // 这里再判一次视角，避免某帧 Update 还没跑就被右键问到的竞态
+            if (targetCamera != null && !targetCamera.IsCharacterView) return false;
             if (_nearFollower == null) return false;
 
             if (panel.IsOpen) return true;
