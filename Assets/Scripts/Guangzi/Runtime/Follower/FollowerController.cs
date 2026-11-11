@@ -40,6 +40,10 @@ namespace Guangzi.Runtime
             DeliverFetchedItems = 3,
         }
 
+        [Header("身份")]
+        [Tooltip("显示名。多随从时用来区分")]
+        [SerializeField] private string displayName = "随从";
+
         [Header("移动")]
         [SerializeField] private float moveSpeed = 3.5f;
         [SerializeField] private float turnSpeed = 12f;
@@ -88,6 +92,11 @@ namespace Guangzi.Runtime
         private PlayerTask _playerTask = PlayerTask.None;
         private Job _pendingJob;
 
+        /// <summary>场景里所有的随从。列表界面遍历它。</summary>
+        public static readonly List<FollowerController> All = new List<FollowerController>();
+
+        public string DisplayName => displayName;
+
         public Inventory Bag => _bag;
         public bool HasJob => _job != null;
         public string CurrentJobType => _job != null ? _job.type : string.Empty;
@@ -103,6 +112,16 @@ namespace Guangzi.Runtime
             if (visual == null) visual = transform;
             Vitals = new PlayerVitals(maxHealth, maxStamina);
             EnsureBag();
+        }
+
+        private void OnEnable()
+        {
+            if (!All.Contains(this)) All.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            All.Remove(this);
         }
 
         /// <summary>

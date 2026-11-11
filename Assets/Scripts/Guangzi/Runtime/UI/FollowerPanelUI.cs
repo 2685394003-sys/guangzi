@@ -105,7 +105,15 @@ namespace Guangzi.Runtime
 
         public void Open()
         {
+            Open(null);
+        }
+
+        /// <summary>打开某个随从的面板。传 null 表示沿用当前绑定（靠近右键走的这条路）。</summary>
+        public void Open(FollowerController target)
+        {
             if (root == null) return;
+
+            if (target != null) follower = target;
 
             root.SetActive(true);
             root.transform.SetAsLastSibling();
@@ -132,7 +140,7 @@ namespace Guangzi.Runtime
         {
             if (follower == null) return;
 
-            if (titleLabel != null) titleLabel.text = "随从";
+            if (titleLabel != null) titleLabel.text = follower.DisplayName;
 
             RefreshVitals();
             RefreshStatus();
