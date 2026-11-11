@@ -25,8 +25,13 @@ namespace Guangzi.Runtime
         [Tooltip("玩家和随从的格子距离在多少以内可以交互。1 = 上下左右相邻或同格")]
         [SerializeField] private int maxGridDistance = 1;
 
+        [Header("提示标签")]
+        [Tooltip("标签显示在随从头顶上方多高的地方（米）")]
+        [SerializeField] private float hintHeightOffset = 1.55f;
+
         private GridWorld _world;
         private PlayerController _player;
+        private Camera _rayCamera;
 
         public static FollowerInteract Instance { get; private set; }
 
@@ -58,7 +63,42 @@ namespace Guangzi.Runtime
                            && panel != null
                            && !panel.IsOpen;
 
-            if (hintRoot.activeSelf != visible) hintRoot.SetActive(visible);
+            if (!visible)
+            {
+                if (hintRoot.activeSelf) hintRoot.SetActive(false);
+                return;
+            }
+
+            var cam = ResolveCamera();
+            if (cam == null || follower == null)
+            {
+                if (hintRoot.activeSelf) hintRoot.SetActive(false);
+                return;
+            }
+
+            // 投影到屏幕：标签跟着随从头顶走，而不是钉死在屏幕某个位置。
+            // Canvas 是 Overlay，RectTransform.position 就是屏幕像素坐标。
+            Vector3 world = follower.transform.position + Vector3.up * hintHeightOffset;
+            Vector3 screen = cam.WorldToScreenPoint(world);
+
+            // z <= 0 表示在相机背后，这时候不能显示，
+            // 否则会把屏幕坐标镜像到反方向，出现一个"鬼影标签"
+            if (screen.z <= 0f)
+            {
+                if (hintRoot.activeSelf) hintRoot.SetActive(false);
+                return;
+            }
+
+            if (!hintRoot.activeSelf) hintRoot.SetActive(true);
+
+            var rect = hintRoot.transform as RectTransform;
+            if (rect != null) rect.position = screen;
+        }
+
+        private Camera ResolveCamera()
+        {
+            if (_rayCamera == null) _rayCamera = Camera.main;
+            return _rayCamera;
         }
 
         /// <summary>

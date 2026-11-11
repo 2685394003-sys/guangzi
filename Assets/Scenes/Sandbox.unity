@@ -673,10 +673,10 @@ RectTransform:
   - {fileID: 1395139544}
   m_Father: {fileID: 2028262901}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0}
-  m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 118}
-  m_SizeDelta: {x: 286, y: 38}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 268, y: 34}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &42437670
 MonoBehaviour:
@@ -15982,7 +15982,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 461530121}
-    m_FontSize: 17
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -23940,6 +23940,7 @@ MonoBehaviour:
   panel: {fileID: 2028262907}
   hintRoot: {fileID: 42437668}
   maxGridDistance: 1
+  hintHeightOffset: 2
 --- !u!114 &2028262907
 MonoBehaviour:
   m_ObjectHideFlags: 0
