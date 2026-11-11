@@ -55,12 +55,26 @@ namespace Guangzi.Runtime
         [Tooltip("能带几种物品。1 = 只能带一组同类型（当前设定）")]
         [SerializeField] private int bagSlots = 1;
 
+        [Header("数值")]
+        [SerializeField] private int maxHealth = 100;
+        [SerializeField] private int maxStamina = 100;
+
+        [Tooltip("建造一次消耗多少体力")]
+        [SerializeField] private int buildStaminaCost = 8;
+
+        [Tooltip("挖掘一次消耗多少体力")]
+        [SerializeField] private int mineStaminaCost = 5;
+
+        [Tooltip("待命时每秒恢复多少体力")]
+        [SerializeField] private float staminaRegenPerSecond = 3f;
+
         [Header("视图")]
         [SerializeField] private Transform visual;
 
         private GridWorld _world;
         private Inventory _bag;
         private PlayerController _player;
+        private float _staminaAccumulator;
 
         private State _state = State.Idle;
         private Job _job;
@@ -78,9 +92,13 @@ namespace Guangzi.Runtime
         public string StateName => _state.ToString();
         public bool IsBagEmpty => _bag == null || BagTotal() == 0;
 
+        /// <summary>随从的血量 / 体力。和玩家共用同一个 PlayerVitals 数据类。</summary>
+        public PlayerVitals Vitals { get; private set; }
+
         private void Awake()
         {
             if (visual == null) visual = transform;
+            Vitals = new PlayerVitals(maxHealth, maxStamina);
             EnsureBag();
         }
 
@@ -132,6 +150,18 @@ namespace Guangzi.Runtime
 
         private void TickIdle()
         {
+            // 待命时回体力。和玩家那套一样的思路：只有闲下来才回，干活时不动
+            if (Vitals != null && Vitals.Stamina < Vitals.MaxStamina && staminaRegenPerSecond > 0f)
+            {
+                _staminaAccumulator += staminaRegenPerSecond * Time.deltaTime;
+                if (_staminaAccumulator >= 1f)
+                {
+                    int whole = Mathf.FloorToInt(_staminaAccumulator);
+                    _staminaAccumulator -= whole;
+                    Vitals.RestoreStamina(whole);
+                }
+            }
+
             _idleTimer -= Time.deltaTime;
             if (_idleTimer > 0f) return;
 
@@ -446,6 +476,14 @@ namespace Guangzi.Runtime
             {
                 // 挖出来的东西进随身背包，不进玩家仓库
                 success = _world.TryRemoveAt(_job.target, _bag);
+            }
+
+            // 干完活才扣体力，失败不扣
+            if (success && Vitals != null)
+            {
+                int cost = _job.type == Job.TypeBuild ? buildStaminaCost : mineStaminaCost;
+                Vitals.DrainStamina(cost);
+                _staminaAccumulator = 0f;
             }
 
             FinishJob(success);

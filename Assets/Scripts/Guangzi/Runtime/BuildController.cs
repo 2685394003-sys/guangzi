@@ -597,6 +597,10 @@ namespace Guangzi.Runtime
             var eventSystem = UnityEngine.EventSystems.EventSystem.current;
             if (eventSystem != null && eventSystem.IsPointerOverGameObject()) return;
 
+            // 靠近随从时，右键优先当作「打开随从面板」，不清空手持
+            var interact = FollowerInteract.Instance;
+            if (interact != null && interact.TryInteract()) return;
+
             ClearHeldItem();
         }
 
