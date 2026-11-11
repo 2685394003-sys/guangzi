@@ -116,9 +116,19 @@ namespace Guangzi.Runtime
         /// <summary>尝试放置。失败会返回具体原因，调用方直接拿去显示。</summary>
         public BuildCheck TryPlace(BuildDef def, GridPos origin)
         {
+            return TryPlace(def, origin, null);
+        }
+
+        /// <summary>
+        /// 指定「谁付材料」。随从建造时传自己的背包——
+        /// 材料必须由随从本人持有，不能直接从玩家仓库划走（那等于远程施工）。
+        /// 传 null 就等于从玩家仓库扣，保持原来的行为。
+        /// </summary>
+        public BuildCheck TryPlace(BuildDef def, GridPos origin, IResourceStore payer)
+        {
             if (Map == null) return BuildCheck.Fail(BuildInvalidReason.OutOfBounds, origin);
 
-            var store = Store;
+            var store = payer != null ? payer : Store;
 
             var check = BuildValidator.Check(Map, def, origin, store);
             if (!check.ok) return check;
@@ -140,24 +150,38 @@ namespace Guangzi.Runtime
             return BuildCheck.Ok;
         }
 
-        /// <summary>按格子拆除（点哪拆哪，多格物块拆整块）。</summary>
+        /// <summary>按格子拆除（点哪拆哪，多格物块拆整块）。产出的材料回到玩家仓库。</summary>
         public bool TryRemoveAt(GridPos pos)
+        {
+            return TryRemoveAt(pos, null);
+        }
+
+        /// <summary>
+        /// 指定「产物归谁」。随从挖掘时传自己的背包——
+        /// 挖到的东西先落在随从身上，由他负责搬运，不是凭空进玩家仓库。
+        /// </summary>
+        public bool TryRemoveAt(GridPos pos, IResourceStore receiver)
         {
             if (Map == null) return false;
 
             var obj = Map.GetObjectAt(pos);
             if (obj == null) return false;
 
-            return TryRemoveById(obj.id);
+            return TryRemoveById(obj.id, receiver);
         }
 
         public bool TryRemoveById(int id)
+        {
+            return TryRemoveById(id, null);
+        }
+
+        public bool TryRemoveById(int id, IResourceStore receiver)
         {
             if (Map == null) return false;
 
             if (!Map.RemoveObject(id, out var removed, out var refund)) return false;
 
-            RefundAll(Store, refund);
+            RefundAll(receiver != null ? receiver : Store, refund);
             ObjectRemoved?.Invoke(removed);
             return true;
         }
