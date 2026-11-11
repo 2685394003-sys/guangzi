@@ -1,6 +1,15 @@
 {
   "items": [
     {
+      "id": "bread",
+      "displayName": "面包",
+      "category": "Food",
+      "maxStack": 20,
+      "color": "#D9A24A",
+      "nutrition": 35,
+      "sellPrice": 6
+    },
+    {
       "id": "wood",
       "displayName": "木材",
       "category": "Material",

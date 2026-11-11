@@ -405,7 +405,7 @@ namespace Guangzi.Runtime
             if (!BeginMoveToTarget(job.target)) FailJob(job);
         }
 
-        /// <summary>把背包里的东西倒回玩家背包。</summary>
+        /// <summary>把背包里的东西倒回玩家背包。锁定的物品跳过，留在身上。</summary>
         private void DoDeliver()
         {
             var playerBag = GetPlayerInventory();
@@ -416,6 +416,10 @@ namespace Guangzi.Runtime
                 {
                     var stack = _bag.GetSlot(i);
                     if (stack == null || stack.IsEmpty) continue;
+
+                    // 锁定的东西不交出去——玩家用锁定来「钉住」某些物品，
+                    // 比如让随从背着食物随时吃，或者留一把工具在身上
+                    if (stack.Locked) continue;
 
                     var def = stack.Def;
                     int amount = stack.Amount;
@@ -428,6 +432,26 @@ namespace Guangzi.Runtime
 
             _state = State.Idle;
             _idleTimer = idleScanInterval;
+        }
+
+        /// <summary>
+        /// 让随从吃掉一份食物恢复体力。返回是否真的吃了。
+        ///
+        /// 体力满的时候不吃——不然玩家点一下就把食物浪费掉了，
+        /// 而且这种浪费是不可逆的（吃都吃了）。
+        /// </summary>
+        public bool EatItem(ItemStack stack)
+        {
+            if (stack == null || stack.IsEmpty) return false;
+            if (!stack.Def.IsFood) return false;
+            if (Vitals == null) return false;
+            if (Vitals.Stamina >= Vitals.MaxStamina) return false;
+
+            stack.Remove(1);
+            Vitals.RestoreStamina(stack.Def.nutrition);
+
+            _staminaAccumulator = 0f;
+            return true;
         }
 
         // ---------- 干活 ----------

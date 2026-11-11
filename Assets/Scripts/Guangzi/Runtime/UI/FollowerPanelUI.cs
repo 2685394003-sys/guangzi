@@ -1,5 +1,6 @@
 using Guangzi.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Guangzi.Runtime
@@ -32,6 +33,10 @@ namespace Guangzi.Runtime
         [SerializeField] private HotbarSlotView[] bagSlots;
         [SerializeField] private Text emptyHint;
 
+        [Header("右键菜单")]
+        [SerializeField] private ItemContextMenu contextMenu;
+        [SerializeField] private SlotRightClick[] slotRightClicks;
+
         public static FollowerPanelUI Instance { get; private set; }
 
         public bool IsOpen => root != null && root.activeSelf;
@@ -43,14 +48,53 @@ namespace Guangzi.Runtime
             if (root == null) root = gameObject;
             if (windowRect == null) windowRect = root.transform as RectTransform;
             if (closeButton != null) closeButton.onClick.AddListener(Close);
+            SubscribeSlotRightClicks();
 
             root.SetActive(false);
+        }
+
+        private void SubscribeSlotRightClicks()
+        {
+            if (slotRightClicks == null) return;
+
+            for (int i = 0; i < slotRightClicks.Length; i++)
+            {
+                if (slotRightClicks[i] == null) continue;
+                slotRightClicks[i].RightClicked += OnSlotRightClicked;
+            }
+        }
+
+        private void UnsubscribeSlotRightClicks()
+        {
+            if (slotRightClicks == null) return;
+
+            for (int i = 0; i < slotRightClicks.Length; i++)
+            {
+                if (slotRightClicks[i] == null) continue;
+                slotRightClicks[i].RightClicked -= OnSlotRightClicked;
+            }
+        }
+
+        /// <summary>右键格子：弹出物品操作菜单。</summary>
+        private void OnSlotRightClicked(int index)
+        {
+            if (contextMenu == null) return;
+            if (follower == null || follower.Bag == null) return;
+
+            var stack = follower.Bag.GetSlot(index);
+            if (stack == null || stack.IsEmpty) return;
+
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+
+            contextMenu.Show(stack, follower, mouse.position.ReadValue());
         }
 
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
             if (closeButton != null) closeButton.onClick.RemoveListener(Close);
+            UnsubscribeSlotRightClicks();
         }
 
         private void Update()

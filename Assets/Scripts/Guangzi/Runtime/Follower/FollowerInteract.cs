@@ -102,17 +102,19 @@ namespace Guangzi.Runtime
         }
 
         /// <summary>
-        /// 右键点一下时调用。在范围内就开面板（已开则关），返回是否消费了这次点击。
-        /// 返回 true 时调用方不要再执行「清空手持」。
+        /// 右键点一下时调用。在范围内就开面板，返回是否消费了这次点击。
+        ///
+        /// 面板**已经开着**的时候只消费点击、不关面板——
+        /// 因为右键在面板里另有用途（对物品弹操作菜单）。关面板走右上角的 X。
         /// </summary>
         public bool TryInteract()
         {
             if (panel == null) return false;
             if (!IsPlayerNear) return false;
 
-            if (panel.IsOpen) panel.Close();
-            else panel.Open();
+            if (panel.IsOpen) return true;
 
+            panel.Open();
             return true;
         }
 

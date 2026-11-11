@@ -16,6 +16,17 @@ namespace Guangzi.Core
 
         public bool IsEmpty => Amount <= 0;
 
+        /// <summary>
+        /// 锁定标记（lock）。
+        ///
+        /// 锁住的堆不会被随从自动送走，会一直留在随从身上——
+        /// 玩家用它来「钉住」某些东西：比如让随从背着食物随时吃，或者留一把工具不让他交出去。
+        ///
+        /// 放在物品堆上而不是槽位上：背包刷新、换格子、堆叠拆分之后，
+        /// 「这件东西被锁了」这个状态应该跟着物品走，而不是跟着格子走。
+        /// </summary>
+        public bool Locked { get; set; }
+
         public bool IsFull => Amount >= Def.maxStack;
 
         public int Space => Def.maxStack - Amount;
