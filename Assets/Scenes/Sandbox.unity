@@ -5687,6 +5687,7 @@ GameObject:
   m_Component:
   - component: {fileID: 615913420}
   - component: {fileID: 615913419}
+  - component: {fileID: 615913421}
   m_Layer: 0
   m_Name: GhostBlocks
   m_TagString: Untagged
@@ -5724,6 +5725,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &615913421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615913418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7913f2f6cc05a04e8d7c84c95ffd5cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Guangzi.Runtime::Guangzi.Runtime.CursorItemPreview
+  targetCamera: {fileID: 1785867381}
+  warehouse: {fileID: 2028262904}
+  world: {fileID: 1583435841}
+  rayCamera: {fileID: 1785867383}
+  alpha: 0.45
+  sizeScale: 0.94
+  groundHeight: 0
+  maxRayDistance: 300
 --- !u!1 &617983191
 GameObject:
   m_ObjectHideFlags: 0
@@ -16685,6 +16706,8 @@ MonoBehaviour:
   handReach: 1
   limitInCharacterView: 1
   staminaPerMine: 2
+  rightClickMaxDrag: 8
+  rightClickMaxSeconds: 0.35
   highlighter: {fileID: 0}
   targetCamera: {fileID: 0}
   hotbar: {fileID: 2028262897}

@@ -140,6 +140,9 @@ namespace Guangzi.Runtime
         /// <summary>点格子：选中它；再点同一个就取消选中。</summary>
         public void SelectSlot(int index)
         {
+            // 背包可能刚就绪还没订阅上，这里补一次，否则第一次点击会静默失败
+            EnsureBound();
+
             var inventory = GetInventory();
             if (inventory == null) return;
 

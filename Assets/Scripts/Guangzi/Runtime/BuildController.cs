@@ -34,6 +34,13 @@ namespace Guangzi.Runtime
         [Tooltip("挖一个方块花多少体力。0 = 不消耗")]
         [SerializeField] private int staminaPerMine = 2;
 
+        [Header("右键清空手持")]
+        [Tooltip("右键按下后鼠标位移超过这个像素数，就当成拖拽相机，不清空物品")]
+        [SerializeField] private float rightClickMaxDrag = 8f;
+
+        [Tooltip("右键按住超过这个秒数，就当成拖拽相机，不清空物品")]
+        [SerializeField] private float rightClickMaxSeconds = 0.35f;
+
         [Header("引用（留空自动查找）")]
         [SerializeField] private CellHighlighter highlighter;
         [SerializeField] private Camera targetCamera;
@@ -48,6 +55,11 @@ namespace Guangzi.Runtime
         private bool _hasHover;
         private GridPos _hoverPos;
         private BuildCheck _lastCheck;
+
+        // 右键「点击 vs 拖拽」的判定现场
+        private bool _rightPressed;
+        private Vector2 _rightDownScreenPos;
+        private float _rightDownTime;
 
         public GridPos HoverPos => _hoverPos;
         public bool HasHover => _hasHover;
@@ -176,6 +188,7 @@ namespace Guangzi.Runtime
 
             UpdateHover();
             HandlePointer();
+            HandleRightClickClear();
         }
 
         private void UpdateHover()
@@ -406,6 +419,56 @@ namespace Guangzi.Runtime
 
             Color color;
             return ColorUtility.TryParseHtmlString(itemDef.colorHex, out color) ? color : fallback;
+        }
+
+        /// <summary>
+        /// 右键清空手上拿的仓库物品。
+        ///
+        /// 难点：右键同时是相机拖拽键。所以必须区分「点一下」和「拖一下」：
+        /// 用位移和按住时长两个条件——只要其中一个超标，就认为玩家在拖相机，不清空。
+        /// 只判位移不够：手抖或者帧率低的时候拖拽可能只有两三像素。
+        /// </summary>
+        private void HandleRightClickClear()
+        {
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+
+            if (mouse.rightButton.wasPressedThisFrame)
+            {
+                _rightPressed = true;
+                _rightDownScreenPos = mouse.position.ReadValue();
+                _rightDownTime = Time.time;
+                return;
+            }
+
+            if (!_rightPressed) return;
+            if (!mouse.rightButton.wasReleasedThisFrame) return;
+
+            _rightPressed = false;
+
+            float drag = (mouse.position.ReadValue() - _rightDownScreenPos).magnitude;
+            float held = Time.time - _rightDownTime;
+
+            if (drag > rightClickMaxDrag || held > rightClickMaxSeconds) return;
+
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null && eventSystem.IsPointerOverGameObject()) return;
+
+            ClearHeldItem();
+        }
+
+        private void ClearHeldItem()
+        {
+            // 目前只有上帝视角存在「手上拿着仓库物品」这个概念
+            if (!IsGodView) return;
+
+            var warehouse = WarehouseWindow.Instance;
+            if (warehouse == null) return;
+            if (string.IsNullOrEmpty(warehouse.SelectedItemId)) return;
+
+            warehouse.ClearSelection();
+
+            if (logBuildResults) Debug.Log("[Order] 右键清空手持物品");
         }
 
         private void HideHighlight()

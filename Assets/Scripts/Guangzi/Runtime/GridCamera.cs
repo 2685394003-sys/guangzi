@@ -88,6 +88,9 @@ namespace Guangzi.Runtime
         /// <summary>当前是不是角色视角。</summary>
         public bool IsCharacterView => _viewMode == CameraViewMode.Character;
 
+        /// <summary>当前是不是上帝视角。</summary>
+        public bool IsGodView => _viewMode == CameraViewMode.God;
+
         /// <summary>角色能不能被 WASD 操控——只有角色视角下能。角色控制器查这个。</summary>
         public bool AllowsPlayerControl => _viewMode == CameraViewMode.Character;
 
