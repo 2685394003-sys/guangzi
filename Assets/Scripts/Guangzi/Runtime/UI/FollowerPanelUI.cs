@@ -37,6 +37,9 @@ namespace Guangzi.Runtime
         [SerializeField] private ItemContextMenu contextMenu;
         [SerializeField] private SlotRightClick[] slotRightClicks;
 
+        [Header("容器拖放")]
+        [SerializeField] private ContainerSlot[] containerSlots;
+
         public static FollowerPanelUI Instance { get; private set; }
 
         public bool IsOpen => root != null && root.activeSelf;
@@ -113,7 +116,11 @@ namespace Guangzi.Runtime
         {
             if (root == null) return;
 
-            if (target != null) follower = target;
+            if (target != null)
+            {
+                follower = target;
+                BindContainerSlots(target);
+            }
 
             root.SetActive(true);
             root.transform.SetAsLastSibling();
@@ -128,6 +135,17 @@ namespace Guangzi.Runtime
         {
             if (root == null) return;
             root.SetActive(false);
+        }
+
+        /// <summary>让背包格子收东西时收进「当前显示的这个随从」。</summary>
+        private void BindContainerSlots(FollowerController target)
+        {
+            if (containerSlots == null) return;
+
+            for (int i = 0; i < containerSlots.Length; i++)
+            {
+                if (containerSlots[i] != null) containerSlots[i].SetFollower(target);
+            }
         }
 
         public void Toggle()
