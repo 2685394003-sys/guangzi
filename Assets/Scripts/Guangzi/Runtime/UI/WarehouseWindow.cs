@@ -32,7 +32,7 @@ namespace Guangzi.Runtime
         [SerializeField] private InputField searchField;
         [SerializeField] private Button sortButton;
         [SerializeField] private Text sortLabel;
-        [SerializeField] private Button categoryButton;
+        [SerializeField] private DropdownList categoryDropdown;
         [SerializeField] private Text categoryLabel;
 
         [Header("行为")]
@@ -89,7 +89,7 @@ namespace Guangzi.Runtime
 
             if (closeButton != null) closeButton.onClick.AddListener(Close);
             if (sortButton != null) sortButton.onClick.AddListener(ToggleSort);
-            if (categoryButton != null) categoryButton.onClick.AddListener(CycleCategory);
+            if (categoryDropdown != null) categoryDropdown.OnValueChanged += OnCategoryChanged;
             if (searchField != null) searchField.onValueChanged.AddListener(OnSearchChanged);
 
             // 开局默认关着。只在 Awake 关一次，不放在 Update 里——
@@ -103,7 +103,7 @@ namespace Guangzi.Runtime
 
             if (closeButton != null) closeButton.onClick.RemoveListener(Close);
             if (sortButton != null) sortButton.onClick.RemoveListener(ToggleSort);
-            if (categoryButton != null) categoryButton.onClick.RemoveListener(CycleCategory);
+            if (categoryDropdown != null) categoryDropdown.OnValueChanged -= OnCategoryChanged;
             if (searchField != null) searchField.onValueChanged.RemoveListener(OnSearchChanged);
 
             Unsubscribe();
@@ -208,11 +208,15 @@ namespace Guangzi.Runtime
             _category = (_category + 1) % 3;
         }
 
+        private void OnCategoryChanged(int value)
+        {
+            _category = value;
+        }
+
         public void Refresh()
         {
             if (titleLabel != null) titleLabel.text = title;
             if (sortLabel != null) sortLabel.text = _descending ? "降序" : "升序";
-            if (categoryLabel != null) categoryLabel.text = CategoryName(_category);
 
             BuildAggregate();
             Filter();

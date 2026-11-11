@@ -32,7 +32,7 @@ namespace Guangzi.Runtime
         [SerializeField] private InputField searchField;
         [SerializeField] private Button sortButton;
         [SerializeField] private Text sortLabel;
-        [SerializeField] private Button categoryButton;
+        [SerializeField] private DropdownList categoryDropdown;
         [SerializeField] private Text categoryLabel;
 
         [Header("格子")]
@@ -66,7 +66,7 @@ namespace Guangzi.Runtime
 
             if (closeButton != null) closeButton.onClick.AddListener(Close);
             if (sortButton != null) sortButton.onClick.AddListener(ToggleSort);
-            if (categoryButton != null) categoryButton.onClick.AddListener(CycleCategory);
+            if (categoryDropdown != null) categoryDropdown.OnValueChanged += OnCategoryChanged;
 
             if (searchField != null) searchField.onValueChanged.AddListener(OnSearchChanged);
             if (includeToggle != null) includeToggle.onValueChanged.AddListener(OnIncludeChanged);
@@ -80,7 +80,7 @@ namespace Guangzi.Runtime
 
             if (closeButton != null) closeButton.onClick.RemoveListener(Close);
             if (sortButton != null) sortButton.onClick.RemoveListener(ToggleSort);
-            if (categoryButton != null) categoryButton.onClick.RemoveListener(CycleCategory);
+            if (categoryDropdown != null) categoryDropdown.OnValueChanged -= OnCategoryChanged;
             if (searchField != null) searchField.onValueChanged.RemoveListener(OnSearchChanged);
             if (includeToggle != null) includeToggle.onValueChanged.RemoveListener(OnIncludeChanged);
         }
@@ -129,9 +129,9 @@ namespace Guangzi.Runtime
             _descending = !_descending;
         }
 
-        private void CycleCategory()
+        private void OnCategoryChanged(int value)
         {
-            _category = (_category + 1) % 3;
+            _category = value;
         }
 
         private void OnIncludeChanged(bool value)
@@ -145,7 +145,6 @@ namespace Guangzi.Runtime
             if (_chest == null) return;
 
             if (sortLabel != null) sortLabel.text = _descending ? "降序" : "升序";
-            if (categoryLabel != null) categoryLabel.text = CategoryName(_category);
             if (includeLabel != null) includeLabel.text = _chest.IncludeInWarehouse ? "计入仓库：开" : "计入仓库：关";
 
             Collect();
