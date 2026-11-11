@@ -146,8 +146,22 @@ namespace Guangzi.Runtime
                 int accepted = target.TryAccept(def, amount);
                 if (accepted > 0) _bag.Remove(id, accepted);
 
-                // 容器装不下的部分掉在脚下，不能凭空消失
-                if (accepted < amount) DropOnGround(def, amount - accepted, eventData.position);
+                int leftover = amount - accepted;
+                if (leftover > 0)
+                {
+                    // 随从背包只有一组容量，塞不下别的东西。
+                    // 这种情况**不能丢在地上**——玩家面板挡着看不到，会以为东西凭空没了。
+                    // 改成退回玩家身上，并明确告诉他为什么放不进去。
+                    if (target.SlotKind == ContainerSlot.Kind.Follower)
+                    {
+                        ToastUI.Show("随从只能携带一组同类型物品，放不下 " + def.displayName);
+                        ReturnLeftoverToPlayer(def, leftover, eventData.position);
+                    }
+                    else
+                    {
+                        DropOnGround(def, leftover, eventData.position);
+                    }
+                }
 
                 ClearDrag();
                 return;
@@ -207,6 +221,30 @@ namespace Guangzi.Runtime
 
             var byIndex = inventory.GetSlot(slotIndex);
             return byIndex != null && !byIndex.IsEmpty ? byIndex : null;
+        }
+
+        /// <summary>
+        /// 把装不下的部分退回玩家身上。
+        /// 来源本身是玩家背包时，先扣再退等于原样不动，玩家不会丢东西。
+        /// 玩家背包也满了才落到地上兜底。
+        /// </summary>
+        private void ReturnLeftoverToPlayer(ItemDef def, int amount, Vector2 screenPosition)
+        {
+            if (def == null || amount <= 0) return;
+
+            int taken = _bag.Remove(def.id, amount);
+            if (taken <= 0) return;
+
+            var player = PlayerInventory.Instance;
+            if (player == null || player.Inventory == null)
+            {
+                var dropSystem = DropSystem.Instance;
+                if (dropSystem != null) dropSystem.DropAt(def, taken, ResolveGroundPosition(screenPosition));
+                return;
+            }
+
+            int added = player.Inventory.Add(def, taken);
+            if (added < taken) DropOnGround(def, taken - added, screenPosition);
         }
 
         private void MoveGhost(Vector2 screenPosition)
