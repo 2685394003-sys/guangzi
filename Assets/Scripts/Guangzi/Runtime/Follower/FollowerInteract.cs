@@ -32,6 +32,7 @@ namespace Guangzi.Runtime
         private GridWorld _world;
         private PlayerController _player;
         private Camera _rayCamera;
+        private FollowerController _nearFollower;
 
         public static FollowerInteract Instance { get; private set; }
 
@@ -50,7 +51,8 @@ namespace Guangzi.Runtime
 
         private void Update()
         {
-            IsPlayerNear = ComputeNear();
+            _nearFollower = FindNearest();
+            IsPlayerNear = _nearFollower != null;
             UpdateHint();
         }
 
@@ -70,7 +72,7 @@ namespace Guangzi.Runtime
             }
 
             var cam = ResolveCamera();
-            if (cam == null || follower == null)
+            if (cam == null || _nearFollower == null)
             {
                 if (hintRoot.activeSelf) hintRoot.SetActive(false);
                 return;
@@ -78,7 +80,7 @@ namespace Guangzi.Runtime
 
             // 投影到屏幕：标签跟着随从头顶走，而不是钉死在屏幕某个位置。
             // Canvas 是 Overlay，RectTransform.position 就是屏幕像素坐标。
-            Vector3 world = follower.transform.position + Vector3.up * hintHeightOffset;
+            Vector3 world = _nearFollower.transform.position + Vector3.up * hintHeightOffset;
             Vector3 screen = cam.WorldToScreenPoint(world);
 
             // z <= 0 表示在相机背后，这时候不能显示，
@@ -102,7 +104,7 @@ namespace Guangzi.Runtime
         }
 
         /// <summary>
-        /// 右键点一下时调用。在范围内就开面板，返回是否消费了这次点击。
+        /// 右键点一下时调用。在范围内就打开**最近那只**随从的面板，返回是否消费了这次点击。
         ///
         /// 面板**已经开着**的时候只消费点击、不关面板——
         /// 因为右键在面板里另有用途（对物品弹操作菜单）。关面板走右上角的 X。
@@ -110,29 +112,63 @@ namespace Guangzi.Runtime
         public bool TryInteract()
         {
             if (panel == null) return false;
-            if (!IsPlayerNear) return false;
+            if (_nearFollower == null) return false;
 
             if (panel.IsOpen) return true;
 
-            panel.Open();
+            panel.Open(_nearFollower);
             return true;
         }
 
-        private bool ComputeNear()
+        /// <summary>
+        /// 找玩家身边最近的随从。
+        ///
+        /// 多随从之后不能再固定绑一只——玩家站在小二旁边却弹出小一的面板，
+        /// 会以为「右键坏了」。这里按格子距离取最近，超出范围就返回 null。
+        /// </summary>
+        private FollowerController FindNearest()
         {
-            if (follower == null || panel == null) return false;
+            if (panel == null) return null;
 
             if (_world == null) _world = GridWorld.Instance;
-            if (_world == null) return false;
+            if (_world == null) return null;
 
             if (_player == null) _player = FindFirstObjectByType<PlayerController>();
-            if (_player == null) return false;
+            if (_player == null) return null;
 
             var playerCell = _world.WorldToGrid(_player.transform.position);
-            var followerCell = _world.WorldToGrid(follower.transform.position);
 
-            int distance = Mathf.Abs(playerCell.x - followerCell.x) + Mathf.Abs(playerCell.z - followerCell.z);
-            return distance <= maxGridDistance;
+            FollowerController best = null;
+            int bestDistance = int.MaxValue;
+
+            var all = FollowerController.All;
+
+            // 正常情况走 All（运行时注册的）；编辑器里没注册就退回固定引用
+            if (all.Count > 0)
+            {
+                for (int i = 0; i < all.Count; i++)
+                {
+                    var candidate = all[i];
+                    if (candidate == null) continue;
+
+                    var cell = _world.WorldToGrid(candidate.transform.position);
+                    int distance = Mathf.Abs(playerCell.x - cell.x) + Mathf.Abs(playerCell.z - cell.z);
+
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        best = candidate;
+                    }
+                }
+            }
+            else if (follower != null)
+            {
+                var cell = _world.WorldToGrid(follower.transform.position);
+                bestDistance = Mathf.Abs(playerCell.x - cell.x) + Mathf.Abs(playerCell.z - cell.z);
+                best = follower;
+            }
+
+            return bestDistance <= maxGridDistance ? best : null;
         }
     }
 }
