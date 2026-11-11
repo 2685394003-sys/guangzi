@@ -24,6 +24,7 @@ namespace Guangzi.Runtime
         [SerializeField] private GridCamera targetCamera;
         [SerializeField] private HotbarUI hotbar;
         [SerializeField] private WarehouseWindow warehouse;
+        [SerializeField] private BuildController buildController;
 
         private string _lastText;
 
@@ -32,6 +33,7 @@ namespace Guangzi.Runtime
             if (targetCamera == null) targetCamera = FindFirstObjectByType<GridCamera>();
             if (hotbar == null) hotbar = FindFirstObjectByType<HotbarUI>();
             if (warehouse == null) warehouse = FindFirstObjectByType<WarehouseWindow>();
+            if (buildController == null) buildController = FindFirstObjectByType<BuildController>();
         }
 
         private void Update()
@@ -80,6 +82,16 @@ namespace Guangzi.Runtime
             var sb = new StringBuilder(256);
 
             sb.Append("上帝视角\n");
+
+            // 框选中优先显示框选的操作，别的都不用看了
+            if (buildController != null && buildController.IsBrushing)
+            {
+                sb.Append("松开左键 确认框选\n");
+                sb.Append("右键 取消框选\n");
+                sb.Append("R 切换视角");
+                return sb.ToString();
+            }
+
             sb.Append("WASD 平移   ·   滚轮 缩放\n");
 
             // 右键在这个视角有两个用途（点一下取消手持、按住拖拽移镜头），
@@ -93,7 +105,7 @@ namespace Guangzi.Runtime
             }
             else if (stack.Def.category == ItemCategory.Buildable)
             {
-                sb.Append("左键 派随从建造 ").Append(stack.Def.displayName).Append('\n');
+                sb.Append("左键 派随从建造 ").Append(stack.Def.displayName).Append("（按住可框选）\n");
                 sb.Append("右键 点一下取消手持   ·   按住拖拽移镜头\n");
             }
             else if (stack.Def.IsTool)

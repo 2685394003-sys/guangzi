@@ -41,6 +41,10 @@ namespace Guangzi.Runtime
         [Tooltip("右键按住超过这个秒数，就当成拖拽相机，不清空物品")]
         [SerializeField] private float rightClickMaxSeconds = 0.35f;
 
+        [Header("框选建造（仅上帝视角）")]
+        [Tooltip("框选范围的可视化，留空会运行时找")]
+        [SerializeField] private BrushSelectionView brushView;
+
         [Header("引用（留空自动查找）")]
         [SerializeField] private CellHighlighter highlighter;
         [SerializeField] private Camera targetCamera;
@@ -61,6 +65,13 @@ namespace Guangzi.Runtime
         private Vector2 _rightDownScreenPos;
         private float _rightDownTime;
 
+        // 左键拖动框选
+        private DragState _dragState = DragState.None;
+        private GridPos _dragStart;
+
+        /// <summary>正在框选中（给 HUD 提示用）。</summary>
+        public bool IsBrushing => _dragState == DragState.Selecting;
+
         public GridPos HoverPos => _hoverPos;
         public bool HasHover => _hasHover;
         public BuildCheck LastCheck => _lastCheck;
@@ -76,6 +87,18 @@ namespace Guangzi.Runtime
 
             /// <summary>空手或拿工具，左键挖掘。</summary>
             Mine = 2,
+        }
+
+        /// <summary>左键拖动的三个阶段：按下 → 拖出范围 → 松开确认。</summary>
+        private enum DragState
+        {
+            None = 0,
+
+            /// <summary>按下了但还没拖出起点格，此时松开等于单格放置。</summary>
+            Pressed = 1,
+
+            /// <summary>已经拖出范围，松开就是批量确认。</summary>
+            Selecting = 2,
         }
 
         private HandAction CurrentAction
@@ -272,24 +295,142 @@ namespace Guangzi.Runtime
         private void HandlePointer()
         {
             var mouse = Mouse.current;
-            if (mouse == null || !_hasHover) return;
-            if (!mouse.leftButton.wasPressedThisFrame) return;
+            if (mouse == null) return;
 
-            // 点到 UI（快捷栏、面板）时不能穿透到世界里——否则点个格子会顺手在地上盖一块
-            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
-            if (eventSystem != null && eventSystem.IsPointerOverGameObject()) return;
-
-            // 左键行为完全由手上拿的东西决定，不再用 Shift 组合键
-            switch (CurrentAction)
+            // 框选途中按右键 = 取消（此时不判点击/拖拽，按下就取消）
+            if (_dragState != DragState.None && mouse.rightButton.wasPressedThisFrame)
             {
-                case HandAction.Place:
-                    PlaceAt(_hoverPos);
-                    break;
-
-                case HandAction.Mine:
-                    MineAt(_hoverPos);
-                    break;
+                CancelBrush();
+                return;
             }
+
+            // 松开左键 = 确认。拖出去过就批量，没拖就是单格
+            if (_dragState != DragState.None && mouse.leftButton.wasReleasedThisFrame)
+            {
+                ConfirmBrush(IsPointerOverUI());
+                return;
+            }
+
+            // 拖动中：只更新框选范围，不放置
+            if (_dragState != DragState.None)
+            {
+                UpdateBrush();
+                return;
+            }
+
+            if (!_hasHover) return;
+            if (!mouse.leftButton.wasPressedThisFrame) return;
+            if (IsPointerOverUI()) return;
+
+            var action = CurrentAction;
+
+            if (action == HandAction.Mine)
+            {
+                MineAt(_hoverPos);
+                return;
+            }
+
+            if (action != HandAction.Place) return;
+
+            // 上帝视角：按下先别放，等松开时才知道是单格还是框选
+            if (IsGodView)
+            {
+                _dragState = DragState.Pressed;
+                _dragStart = _hoverPos;
+                return;
+            }
+
+            // 角色视角手只有一格，框选没有意义，按下即放
+            PlaceAt(_hoverPos);
+        }
+
+        private static bool IsPointerOverUI()
+        {
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            return eventSystem != null && eventSystem.IsPointerOverGameObject();
+        }
+
+        // ---------- 框选 ----------
+
+        private void UpdateBrush()
+        {
+            if (_dragState != DragState.Pressed) return;
+
+            // 还停在起点格上，说明只是点了一下，不算框选
+            if (_hoverPos.Equals(_dragStart)) return;
+
+            _dragState = DragState.Selecting;
+            RefreshBrushView();
+        }
+
+        private void RefreshBrushView()
+        {
+            if (brushView == null) return;
+
+            var def = CurrentDef;
+            if (def == null) return;
+
+            brushView.Show(_world, _dragStart, _hoverPos,
+                ResolveItemColor(def.id, new Color(0.75f, 0.9f, 0.65f)));
+        }
+
+        /// <summary>松开左键：批量下单。点在 UI 上松开视为放弃。</summary>
+        private void ConfirmBrush(bool overUI)
+        {
+            bool wasSelecting = _dragState == DragState.Selecting;
+            GridPos start = _dragStart;
+            GridPos end = _hoverPos;
+
+            HideBrush();
+
+            if (overUI) return;
+
+            var def = CurrentDef;
+            if (def == null) return;
+
+            if (!wasSelecting)
+            {
+                PlaceAt(start);
+                return;
+            }
+
+            int minX = Mathf.Min(start.x, end.x);
+            int maxX = Mathf.Max(start.x, end.x);
+            int minZ = Mathf.Min(start.z, end.z);
+            int maxZ = Mathf.Max(start.z, end.z);
+
+            int queued = 0;
+            int skipped = 0;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                for (int z = minZ; z <= maxZ; z++)
+                {
+                    // 材料不够 / 已有任务 / 位置被占，都会被跳过，不会中断整批
+                    if (EnqueueBuildJob(def, new GridPos(x, z))) queued++;
+                    else skipped++;
+                }
+            }
+
+            if (logBuildResults)
+            {
+                Debug.Log("[Brush] 框选 " + (maxX - minX + 1) + "x" + (maxZ - minZ + 1) +
+                          "，下单 " + queued + "，跳过 " + skipped);
+            }
+        }
+
+        /// <summary>右键中途取消：一个都不下。</summary>
+        private void CancelBrush()
+        {
+            HideBrush();
+
+            if (logBuildResults) Debug.Log("[Brush] 已取消");
+        }
+
+        private void HideBrush()
+        {
+            _dragState = DragState.None;
+            if (brushView != null) brushView.Hide();
         }
 
         private void PlaceAt(GridPos pos)
@@ -377,17 +518,14 @@ namespace Guangzi.Runtime
         /// <summary>
         /// 上帝视角下的建造：不亲手放，而是排一条任务给随从。
         /// 材料先在这里检查——不够就根本不下单，省得随从白跑一趟。
+        /// 返回是否真的下了单（框选批量时用来统计跳过数）。
         /// </summary>
-        private void EnqueueBuildJob(BuildDef def, GridPos pos)
+        private bool EnqueueBuildJob(BuildDef def, GridPos pos)
         {
-            if (_world.Jobs.HasActiveJobAt(pos)) return;
+            if (_world.Jobs.HasActiveJobAt(pos)) return false;
 
             var bag = PlayerBag;
-            if (bag != null && !bag.CanAfford(def.cost))
-            {
-                if (logBuildResults) Debug.Log("[Order] 材料不足，不下单：" + def.id);
-                return;
-            }
+            if (bag != null && !bag.CanAfford(def.cost)) return false;
 
             var job = _world.Jobs.Enqueue(Job.TypeBuild, pos, 100, def, 1.5f);
 
@@ -396,7 +534,7 @@ namespace Guangzi.Runtime
                 GhostBlockManager.Instance.Show(job.id, pos, ResolveItemColor(def.id, new Color(0.7f, 0.7f, 0.7f)));
             }
 
-            if (logBuildResults) Debug.Log("[Order] 建造单 " + def.id + " @" + pos);
+            return true;
         }
 
         /// <summary>上帝视角下的挖掘：派随从去挖。标记用红色，和建造单的灰色区分开。</summary>

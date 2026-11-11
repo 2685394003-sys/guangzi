@@ -5688,6 +5688,7 @@ GameObject:
   - component: {fileID: 615913420}
   - component: {fileID: 615913419}
   - component: {fileID: 615913421}
+  - component: {fileID: 615913422}
   m_Layer: 0
   m_Name: GhostBlocks
   m_TagString: Untagged
@@ -5745,6 +5746,20 @@ MonoBehaviour:
   sizeScale: 0.94
   groundHeight: 0
   maxRayDistance: 300
+--- !u!114 &615913422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615913418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9313ef4d24129d844a65bb8b1dcaf4df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Guangzi.Runtime::Guangzi.Runtime.BrushSelectionView
+  alpha: 0.28
+  heightScale: 0.9
 --- !u!1 &617983191
 GameObject:
   m_ObjectHideFlags: 0
@@ -16708,6 +16723,7 @@ MonoBehaviour:
   staminaPerMine: 2
   rightClickMaxDrag: 8
   rightClickMaxSeconds: 0.35
+  brushView: {fileID: 615913422}
   highlighter: {fileID: 0}
   targetCamera: {fileID: 0}
   hotbar: {fileID: 2028262897}
@@ -20033,6 +20049,7 @@ MonoBehaviour:
   targetCamera: {fileID: 1785867381}
   hotbar: {fileID: 2028262897}
   warehouse: {fileID: 2028262904}
+  buildController: {fileID: 0}
 --- !u!1 &2028273591
 GameObject:
   m_ObjectHideFlags: 0
