@@ -84,8 +84,13 @@ namespace Guangzi.Runtime
             {
                 var stack = ActiveStack;
 
-                // 空手 = 挖掘（我的世界的规则：空手也能敲东西，只是慢）
-                if (stack == null || stack.IsEmpty) return HandAction.Mine;
+                if (stack == null || stack.IsEmpty)
+                {
+                    // 上帝视角是「指挥模式」，空手点地图什么都不做。
+                    // 那里视野大、格子密，误触代价高——随手一点就可能把不相干的方块挖了。
+                    // 角色视角保持空手可挖（我的世界的规则，人贴得近，误触风险小）。
+                    return IsGodView ? HandAction.None : HandAction.Mine;
+                }
 
                 if (stack.Def.category == ItemCategory.Buildable) return HandAction.Place;
                 if (stack.Def.IsTool) return HandAction.Mine;

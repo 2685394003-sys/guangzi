@@ -88,12 +88,22 @@ namespace Guangzi.Runtime
 
             if (stack == null || stack.IsEmpty)
             {
-                sb.Append("左键 派随从挖掘\n");
+                sb.Append("左键 无操作（先在仓库选物品）\n");
                 sb.Append("右键 按住拖拽移镜头\n");
+            }
+            else if (stack.Def.category == ItemCategory.Buildable)
+            {
+                sb.Append("左键 派随从建造 ").Append(stack.Def.displayName).Append('\n');
+                sb.Append("右键 点一下取消手持   ·   按住拖拽移镜头\n");
+            }
+            else if (stack.Def.IsTool)
+            {
+                sb.Append("左键 派随从挖掘（").Append(stack.Def.displayName).Append("）\n");
+                sb.Append("右键 点一下取消手持   ·   按住拖拽移镜头\n");
             }
             else
             {
-                sb.Append("左键 派随从建造 ").Append(stack.Def.displayName).Append('\n');
+                sb.Append("左键 无操作（").Append(stack.Def.displayName).Append(" 用不了）\n");
                 sb.Append("右键 点一下取消手持   ·   按住拖拽移镜头\n");
             }
 
