@@ -77,12 +77,27 @@ namespace Guangzi.Runtime
 
         private string BuildGodHint()
         {
-            var sb = new StringBuilder(192);
+            var sb = new StringBuilder(256);
 
             sb.Append("上帝视角\n");
-            sb.Append("WASD 平移   ·   右键拖拽   ·   滚轮 缩放\n");
-            sb.Append(DescribeOrder(warehouse != null ? warehouse.SelectedStack : null));
-            sb.Append("\nR 切换视角");
+            sb.Append("WASD 平移   ·   滚轮 缩放\n");
+
+            // 右键在这个视角有两个用途（点一下取消手持、按住拖拽移镜头），
+            // 所以不能笼统写「右键拖拽」——得把两种手势分清楚，否则玩家一拖镜头就把手上的东西丢了。
+            var stack = warehouse != null ? warehouse.SelectedStack : null;
+
+            if (stack == null || stack.IsEmpty)
+            {
+                sb.Append("左键 派随从挖掘\n");
+                sb.Append("右键 按住拖拽移镜头\n");
+            }
+            else
+            {
+                sb.Append("左键 派随从建造 ").Append(stack.Def.displayName).Append('\n');
+                sb.Append("右键 点一下取消手持   ·   按住拖拽移镜头\n");
+            }
+
+            sb.Append("R 切换视角");
 
             return sb.ToString();
         }
@@ -103,14 +118,6 @@ namespace Guangzi.Runtime
             }
 
             return "左键 无操作（" + stack.Def.displayName + " 用不了）";
-        }
-
-        /// <summary>上帝视角下左键会派随从做什么。</summary>
-        private static string DescribeOrder(ItemStack stack)
-        {
-            if (stack == null || stack.IsEmpty) return "左键 派随从挖掘";
-
-            return "左键 派随从建造 " + stack.Def.displayName;
         }
 
         private ItemStack GetHotbarStack()
