@@ -15,19 +15,55 @@ namespace Guangzi.Runtime
         {
             Chest = 0,
             Follower = 1,
+
+            /// <summary>玩家快捷栏 = 玩家背包。拖到这里就是收到身上。</summary>
+            Player = 2,
         }
 
         [SerializeField] private Kind kind = Kind.Chest;
         [SerializeField] private Chest chest;
         [SerializeField] private FollowerController follower;
 
+        /// <summary>
+        /// 这个格子**当前显示的是哪件物品**。
+        ///
+        /// 木箱和仓库会做搜索/排序/过滤，格子下标和容器真实槽位对不上，
+        /// 所以拖拽不能按下标去取，必须按物品 id 反查。
+        /// 由各个面板在填充格子时写入。
+        /// </summary>
+        [SerializeField] private string currentItemId;
+
         public Kind SlotKind => kind;
 
+        public string CurrentItemId => currentItemId;
+
+        public void SetCurrentItem(string itemId)
+        {
+            currentItemId = itemId;
+        }
+
         /// <summary>
-        /// 切换绑定的随从。
-        /// 面板可以在小一/小二之间切换，格子是同一批，必须跟着换——
-        /// 否则打开小二的面板，拖进去的东西会跑进小一包里。
+        /// 这个格子背后的容器。拖拽源靠它知道自己该从哪儿扣东西。
         /// </summary>
+        public Inventory GetInventory()
+        {
+            switch (kind)
+            {
+                case Kind.Chest:
+                    return chest != null ? chest.Inventory : null;
+
+                case Kind.Follower:
+                    return follower != null ? follower.Bag : null;
+
+                case Kind.Player:
+                    var player = PlayerInventory.Instance;
+                    return player != null ? player.Inventory : null;
+
+                default:
+                    return null;
+            }
+        }
+
         public void SetFollower(FollowerController target)
         {
             if (kind != Kind.Follower) return;
@@ -42,19 +78,7 @@ namespace Guangzi.Runtime
         {
             if (def == null || count <= 0) return 0;
 
-            Inventory inventory = null;
-
-            if (kind == Kind.Chest)
-            {
-                if (chest == null) return 0;
-                inventory = chest.Inventory;
-            }
-            else
-            {
-                if (follower == null) return 0;
-                inventory = follower.Bag;
-            }
-
+            var inventory = GetInventory();
             if (inventory == null) return 0;
 
             return inventory.Add(def, count);

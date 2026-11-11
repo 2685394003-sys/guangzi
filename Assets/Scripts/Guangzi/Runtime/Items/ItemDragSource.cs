@@ -2,26 +2,31 @@ using System.Collections.Generic;
 using Guangzi.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Guangzi.Runtime
 {
     /// <summary>
-    /// 快捷栏拖拽（item drag source）：把格子里的东西拖出去。
+    /// 物品拖拽源（item drag source）：把格子里的东西拖出去。
+    ///
+    /// 两种来源都走这一个组件：
+    /// - 挂在**玩家快捷栏**格子：从玩家背包拖，按槽位取
+    /// - 挂在**容器格子**（木箱 / 随从背包）：从那个容器拖，按物品 id 反查
+    ///   （容器面板有搜索排序过滤，格子下标和真实槽位对不上，不能按位置取）
     ///
     /// 三种落点：
-    /// 1. 容器格子（木箱 / 随从背包）→ 放进去
-    /// 2. 地图上 → 丢弃，生成掉落物
-    /// 3. 别处 → 什么都不做（原地不动）
-    ///
-    /// 拖出去的量是**整堆**。要做「拖一半」得加 Shift 分堆，那是另一套交互，先不做。
+    /// 1. 容器格子 → 放进去（装不下掉地上）
+    /// 2. 玩家快捷栏 → 收到身上
+    /// 3. 地图 → 丢弃，生成带物理的掉落物
     /// </summary>
     public class ItemDragSource : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("引用")]
         [SerializeField] private int slotIndex;
         [SerializeField] private HotbarUI hotbar;
+
+        [Tooltip("留空 = 从玩家背包拖。挂在容器格子上时，拖拽源就是那个容器")]
+        [SerializeField] private ContainerSlot sourceContainer;
 
         [Header("拖拽视觉")]
         [Tooltip("跟随鼠标的拖拽图标，默认关；留空则运行时创建")]
@@ -30,17 +35,19 @@ namespace Guangzi.Runtime
         [Tooltip("图标大小（像素）")]
         [SerializeField] private float ghostSize = 56f;
 
-        private ItemStack _dragged;
+        [Header("丢弃")]
+        [Tooltip("扔到地上的散布半径（格）。半格左右，模仿手扔出去的感觉")]
+        [SerializeField] private float scatterRadius = 0.5f;
+
         private Inventory _bag;
+        private string _draggedId;
+        private int _draggedAmount;
         private RectTransform _ghostRect;
-        private RectTransform _canvasRect;
 
         private void Awake()
         {
             if (hotbar == null) hotbar = GetComponentInParent<HotbarUI>();
-
-            var canvas = GetComponentInParent<Canvas>();
-            if (canvas != null) _canvasRect = canvas.transform as RectTransform;
+            if (sourceContainer == null) sourceContainer = GetComponent<ContainerSlot>();
 
             EnsureGhost();
             if (_ghostRect != null) _ghostRect.gameObject.SetActive(false);
@@ -69,20 +76,19 @@ namespace Guangzi.Runtime
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (eventData.button != PointerEventData.InputButton.Left) return;
-            if (hotbar == null) return;
 
-            var playerBag = PlayerInventory.Instance;
-            if (playerBag == null || playerBag.Inventory == null) return;
+            _bag = ResolveSourceInventory();
+            if (_bag == null) return;
 
-            _bag = playerBag.Inventory;
-
-            // 取当前格的物品（按 id 反查，避免槽位在拖拽途中被刷新改动）
-            _dragged = _bag.GetSlot(slotIndex);
-            if (_dragged == null || _dragged.IsEmpty)
+            var stack = ResolveDraggedStack(_bag);
+            if (stack == null || stack.IsEmpty)
             {
-                _dragged = null;
+                _bag = null;
                 return;
             }
+
+            _draggedId = stack.Def.id;
+            _draggedAmount = stack.Amount;
 
             EnsureGhost();
             if (_ghostRect == null) return;
@@ -91,14 +97,14 @@ namespace Guangzi.Runtime
             _ghostRect.SetAsLastSibling();
 
             Color color;
-            if (ColorUtility.TryParseHtmlString(_dragged.Def.colorHex, out color)) dragGhost.color = color;
+            if (ColorUtility.TryParseHtmlString(stack.Def.colorHex, out color)) dragGhost.color = color;
 
             MoveGhost(eventData.position);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (_dragged == null) return;
+            if (_bag == null || string.IsNullOrEmpty(_draggedId)) return;
             MoveGhost(eventData.position);
         }
 
@@ -106,33 +112,101 @@ namespace Guangzi.Runtime
         {
             if (_ghostRect != null) _ghostRect.gameObject.SetActive(false);
 
-            if (_dragged == null || _bag == null)
+            if (_bag == null || string.IsNullOrEmpty(_draggedId))
             {
-                _dragged = null;
+                ClearDrag();
                 return;
             }
 
-            var def = _dragged.Def;
-            int amount = _dragged.Amount;
-            _dragged = null;
+            var database = ItemDatabase.Instance;
+            var def = database != null ? database.Get(_draggedId) : null;
 
-            // 1. 先看落点是不是容器格子
-            var slot = FindContainerSlot(eventData.position);
-            if (slot != null)
+            string id = _draggedId;
+            int amount = _draggedAmount;
+
+            if (def == null)
             {
-                int accepted = slot.TryAccept(def, amount);
-                if (accepted > 0) _bag.TryConsume(def.id, accepted);
+                ClearDrag();
+                return;
+            }
 
-                // 容器装不下的部分丢在脚下，不能凭空消失
+            // 1. 落点是某个容器格子（含玩家快捷栏）
+            var target = FindContainerSlot(eventData.position);
+            if (target != null)
+            {
+                var targetInventory = target.GetInventory();
+
+                // 拖回自己所在的容器：什么都不做
+                if (targetInventory != null && targetInventory == _bag)
+                {
+                    ClearDrag();
+                    return;
+                }
+
+                int accepted = target.TryAccept(def, amount);
+                if (accepted > 0) _bag.Remove(id, accepted);
+
+                // 容器装不下的部分掉在脚下，不能凭空消失
                 if (accepted < amount) DropOnGround(def, amount - accepted, eventData.position);
+
+                ClearDrag();
                 return;
             }
 
-            // 2. 鼠标在 UI 上但不是容器 → 什么都不做
-            if (IsPointerOverUI(eventData.position)) return;
+            // 2. 鼠标落在别的 UI 上 → 不做
+            if (IsPointerOverUI(eventData.position))
+            {
+                ClearDrag();
+                return;
+            }
 
-            // 3. 地图上 → 全部丢弃
+            // 3. 落在空地上 → 整堆丢掉
             DropOnGround(def, amount, eventData.position);
+            ClearDrag();
+        }
+
+        private void ClearDrag()
+        {
+            _bag = null;
+            _draggedId = null;
+            _draggedAmount = 0;
+        }
+
+        private Inventory ResolveSourceInventory()
+        {
+            if (sourceContainer != null)
+            {
+                var inventory = sourceContainer.GetInventory();
+                if (inventory != null) return inventory;
+            }
+
+            var player = PlayerInventory.Instance;
+            return player != null ? player.Inventory : null;
+        }
+
+        /// <summary>
+        /// 取出要拖的那一堆。
+        /// 容器格子按「当前显示的物品 id」反查——面板过滤后下标不可信；
+        /// 快捷栏按槽位取即可（它不过滤）。
+        /// </summary>
+        private ItemStack ResolveDraggedStack(Inventory inventory)
+        {
+            string wantedId = sourceContainer != null ? sourceContainer.CurrentItemId : null;
+
+            if (!string.IsNullOrEmpty(wantedId))
+            {
+                for (int i = 0; i < inventory.Capacity; i++)
+                {
+                    var slot = inventory.GetSlot(i);
+                    if (slot == null || slot.IsEmpty) continue;
+                    if (slot.Def.id == wantedId) return slot;
+                }
+
+                return null;
+            }
+
+            var byIndex = inventory.GetSlot(slotIndex);
+            return byIndex != null && !byIndex.IsEmpty ? byIndex : null;
         }
 
         private void MoveGhost(Vector2 screenPosition)
@@ -143,7 +217,6 @@ namespace Guangzi.Runtime
             _ghostRect.position = screenPosition;
         }
 
-        /// <summary>在鼠标位置找有没有容器格子。</summary>
         private ContainerSlot FindContainerSlot(Vector2 screenPosition)
         {
             var eventSystem = EventSystem.current;
@@ -174,7 +247,10 @@ namespace Guangzi.Runtime
             return results.Count > 0;
         }
 
-        /// <summary>丢到鼠标所指的地面位置。</summary>
+        /// <summary>
+        /// 丢到鼠标所指的地面位置，并加一点随机散布。
+        /// 全都精确落在同一个点会叠成一堆，看不出「扔了一把」。
+        /// </summary>
         private void DropOnGround(ItemDef def, int amount, Vector2 screenPosition)
         {
             if (def == null || amount <= 0) return;
@@ -182,35 +258,32 @@ namespace Guangzi.Runtime
             var dropSystem = DropSystem.Instance;
             if (dropSystem == null) return;
 
-            var camera = Camera.main;
-            Vector3 position;
+            Vector3 position = ResolveGroundPosition(screenPosition);
 
-            if (camera != null)
-            {
-                var ray = camera.ScreenPointToRay(screenPosition);
-                var plane = new Plane(Vector3.up, Vector3.zero);
-
-                if (plane.Raycast(ray, out float enter))
-                {
-                    position = ray.GetPoint(enter);
-                }
-                else
-                {
-                    var player = FindFirstObjectByType<PlayerController>();
-                    position = player != null ? player.transform.position : Vector3.zero;
-                }
-            }
-            else
-            {
-                var player = FindFirstObjectByType<PlayerController>();
-                position = player != null ? player.transform.position : Vector3.zero;
-            }
+            var offset = Random.insideUnitCircle * scatterRadius;
+            position += new Vector3(offset.x, 0f, offset.y);
 
             // 先扣背包，扣掉了才生成掉落物——反过来的话生成失败就会凭空多出东西
             int consumed = _bag.Remove(def.id, amount);
             if (consumed <= 0) return;
 
             dropSystem.DropAt(def, consumed, position);
+        }
+
+        private Vector3 ResolveGroundPosition(Vector2 screenPosition)
+        {
+            var camera = Camera.main;
+
+            if (camera != null)
+            {
+                var ray = camera.ScreenPointToRay(screenPosition);
+                var plane = new Plane(Vector3.up, Vector3.zero);
+
+                if (plane.Raycast(ray, out float enter)) return ray.GetPoint(enter);
+            }
+
+            var player = FindFirstObjectByType<PlayerController>();
+            return player != null ? player.transform.position : Vector3.zero;
         }
     }
 }

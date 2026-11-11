@@ -41,10 +41,29 @@ namespace Guangzi.Runtime
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "Drop_" + def.id;
             go.transform.position = worldPosition + Vector3.up * 0.25f;
-            go.transform.localScale = Vector3.one * 0.4f;
+            go.transform.localScale = Vector3.one * 0.32f;
 
-            var collider = go.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            // 方块自带的 BoxCollider 换成一个更小的球——扔出去会轻微弹一下，
+            // 但不会把玩家卡住，也不会堆成一堵墙
+            var existing = go.GetComponent<Collider>();
+            if (existing != null) Destroy(existing);
+
+            var sphere = go.AddComponent<SphereCollider>();
+            sphere.radius = 0.16f;
+
+            var body = go.AddComponent<Rigidbody>();
+            body.mass = 0.2f;
+            body.linearDamping = 0.6f;
+            body.angularDamping = 0.8f;
+
+            // 只让物理管位移，旋转留给视觉（下面 Update 里自己转）
+            body.constraints = RigidbodyConstraints.FreezeRotation;
+
+            // 手扔出去的初速度：往上一点 + 随机水平方向
+            body.linearVelocity = new Vector3(
+                Random.Range(-0.7f, 0.7f),
+                2.2f,
+                Random.Range(-0.7f, 0.7f));
 
             var renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null && renderer.sharedMaterial != null)

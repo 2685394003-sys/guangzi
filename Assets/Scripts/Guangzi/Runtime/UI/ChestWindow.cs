@@ -117,6 +117,23 @@ namespace Guangzi.Runtime
         public void Close()
         {
             if (root != null) root.SetActive(false);
+
+            // 关掉之后 Refresh 不再跑，格子上的「当前物品」会停在旧值；
+            // 不清掉的话，拖拽源会去拿一件早就不在的货
+            ClearSlotTags();
+        }
+
+        private void ClearSlotTags()
+        {
+            if (slots == null) return;
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] == null) continue;
+
+                var containerSlot = slots[i].GetComponent<ContainerSlot>();
+                if (containerSlot != null) containerSlot.SetCurrentItem(null);
+            }
         }
 
         private void OnSearchChanged(string value)
@@ -213,6 +230,10 @@ namespace Guangzi.Runtime
                 ItemStack stack = i < _filtered.Count ? _filtered[i] : null;
                 slots[i].Refresh(stack);
                 slots[i].SetSelected(false);
+
+                // 告诉容器格「现在显示的是哪件物品」——过滤后下标不可信，拖拽得按 id 反查
+                var containerSlot = slots[i].GetComponent<ContainerSlot>();
+                if (containerSlot != null) containerSlot.SetCurrentItem(stack != null ? stack.Def.id : null);
             }
 
             if (emptyHint != null)

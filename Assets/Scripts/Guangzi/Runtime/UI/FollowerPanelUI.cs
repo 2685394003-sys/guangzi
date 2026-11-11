@@ -135,6 +135,23 @@ namespace Guangzi.Runtime
         {
             if (root == null) return;
             root.SetActive(false);
+
+            // 关掉之后 Refresh 不再跑，清掉格子上的物品标记，
+            // 免得拖拽源拿到一件已经不在的东西
+            ClearSlotTags();
+        }
+
+        private void ClearSlotTags()
+        {
+            if (bagSlots == null) return;
+
+            for (int i = 0; i < bagSlots.Length; i++)
+            {
+                if (bagSlots[i] == null) continue;
+
+                var containerSlot = bagSlots[i].GetComponent<ContainerSlot>();
+                if (containerSlot != null) containerSlot.SetCurrentItem(null);
+            }
         }
 
         /// <summary>让背包格子收东西时收进「当前显示的这个随从」。</summary>
@@ -208,6 +225,10 @@ namespace Guangzi.Runtime
                     ItemStack stack = bag != null && i < bag.Capacity ? bag.GetSlot(i) : null;
                     bagSlots[i].Refresh(stack);
                     bagSlots[i].SetSelected(false);
+
+                    // 告诉容器格「现在显示的是哪件物品」，拖拽靠它反查
+                    var containerSlot = bagSlots[i].GetComponent<ContainerSlot>();
+                    if (containerSlot != null) containerSlot.SetCurrentItem(stack != null ? stack.Def.id : null);
 
                     if (stack != null && !stack.IsEmpty) shown++;
                 }
