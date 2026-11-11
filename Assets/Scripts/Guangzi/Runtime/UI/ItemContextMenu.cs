@@ -24,6 +24,9 @@ namespace Guangzi.Runtime
         [Tooltip("全屏透明遮罩，点它关闭菜单")]
         [SerializeField] private GameObject blocker;
 
+        [SerializeField] private Button takeButton;
+        [SerializeField] private Text takeLabel;
+
         [SerializeField] private Button lockButton;
         [SerializeField] private Text lockLabel;
 
@@ -48,6 +51,7 @@ namespace Guangzi.Runtime
             var canvas = GetComponentInParent<Canvas>();
             if (canvas != null) _canvasRect = canvas.transform as RectTransform;
 
+            if (takeButton != null) takeButton.onClick.AddListener(OnTakeClicked);
             if (lockButton != null) lockButton.onClick.AddListener(OnLockClicked);
             if (eatButton != null) eatButton.onClick.AddListener(OnEatClicked);
 
@@ -64,6 +68,7 @@ namespace Guangzi.Runtime
 
         private void OnDestroy()
         {
+            if (takeButton != null) takeButton.onClick.RemoveListener(OnTakeClicked);
             if (lockButton != null) lockButton.onClick.RemoveListener(OnLockClicked);
             if (eatButton != null) eatButton.onClick.RemoveListener(OnEatClicked);
         }
@@ -103,6 +108,7 @@ namespace Guangzi.Runtime
         {
             if (_target == null) return;
 
+            if (takeLabel != null) takeLabel.text = "获得（" + _target.Amount + "）";
             if (lockLabel != null) lockLabel.text = _target.Locked ? "解除锁定" : "锁定";
 
             bool isFood = _target.Def.IsFood;
@@ -139,6 +145,12 @@ namespace Guangzi.Runtime
             target.y = Mathf.Clamp(target.y, screenMargin, Mathf.Max(screenMargin, height - size.y - screenMargin));
 
             menuRect.position = target;
+        }
+
+        private void OnTakeClicked()
+        {
+            if (_target != null && _follower != null) _follower.GiveItemToPlayer(_target);
+            Hide();
         }
 
         private void OnLockClicked()

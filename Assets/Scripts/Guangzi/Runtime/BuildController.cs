@@ -601,6 +601,10 @@ namespace Guangzi.Runtime
             var interact = FollowerInteract.Instance;
             if (interact != null && interact.TryInteract()) return;
 
+            // 其次是仓库：靠近箱子右键是「打开仓库菜单」
+            var storageInteract = StorageInteract.Instance;
+            if (storageInteract != null && storageInteract.TryInteract()) return;
+
             ClearHeldItem();
         }
 

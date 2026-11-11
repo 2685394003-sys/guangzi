@@ -24,6 +24,9 @@ namespace Guangzi.Core
         /// <summary>挖掘任务：把 target 格的方块挖掉。</summary>
         public const string TypeMine = "mine";
 
+        /// <summary>取货任务：去 target 处的仓库取出 fetchItemId × fetchAmount，再送给玩家。</summary>
+        public const string TypeFetch = "fetch";
+
         public int id;
         public string type;
         public GridPos target;
@@ -34,13 +37,18 @@ namespace Guangzi.Core
         /// <summary>build 任务要放的东西；mine 任务为 null。</summary>
         public BuildDef buildDef;
 
+        /// <summary>fetch 任务要取的物品 id 和数量；其他类型为 null / 0。</summary>
+        public string fetchItemId;
+        public int fetchAmount;
+
         /// <summary>要干多少秒（由方块硬度和工具速度算出来）。</summary>
         public float workRequired;
 
         /// <summary>已经干了多少秒。</summary>
         public float workDone;
 
-        public Job(int id, string type, GridPos target, int priority, BuildDef buildDef = null, float workRequired = 0f)
+        public Job(int id, string type, GridPos target, int priority, BuildDef buildDef = null, float workRequired = 0f,
+                   string fetchItemId = null, int fetchAmount = 0)
         {
             this.id = id;
             this.type = type;
@@ -48,6 +56,8 @@ namespace Guangzi.Core
             this.priority = priority;
             this.buildDef = buildDef;
             this.workRequired = workRequired < 0f ? 0f : workRequired;
+            this.fetchItemId = fetchItemId;
+            this.fetchAmount = fetchAmount < 0 ? 0 : fetchAmount;
             state = JobState.Pending;
             assignedWorkerId = 0;
         }
@@ -95,6 +105,14 @@ namespace Guangzi.Core
         public Job Enqueue(string type, GridPos target, int priority = 100, BuildDef buildDef = null, float workRequired = 0f)
         {
             var job = new Job(_nextId++, type, target, priority, buildDef, workRequired);
+            _jobs.Add(job);
+            return job;
+        }
+
+        /// <summary>下一条取货单：去仓库取出某物若干，再送给玩家。</summary>
+        public Job EnqueueFetch(GridPos storageCell, string itemId, int amount, int priority = 120)
+        {
+            var job = new Job(_nextId++, Job.TypeFetch, storageCell, priority, null, 0f, itemId, amount);
             _jobs.Add(job);
             return job;
         }

@@ -35,6 +35,9 @@ namespace Guangzi.Runtime
             None = 0,
             FetchBuildMaterials = 1,
             DeliverItems = 2,
+
+            /// <summary>从仓库取到货了，送去给玩家。</summary>
+            DeliverFetchedItems = 3,
         }
 
         [Header("移动")]
@@ -167,14 +170,9 @@ namespace Guangzi.Runtime
 
             _idleTimer = idleScanInterval;
 
-            // 闲置时背包还有东西 → 先送回去。
-            // 这是「闲下来才清理」的落点：正忙的时候不折腾背包。
-            if (BagTotal() > 0)
-            {
-                BeginDeliver();
-                return;
-            }
-
+            // 刻意不再「闲置就把背包清空送回去」。
+            // 随从背上背着什么就是什么——玩家要拿就右键「获得」，
+            // 要让他去别处搬就下取货单。主动送货会把玩家刚放好的东西搅乱。
             Job job;
             if (!_world.Jobs.TryClaimNext(1, out job)) return;
 
@@ -185,8 +183,35 @@ namespace Guangzi.Runtime
         {
             if (job.type == Job.TypeBuild) return BeginBuildJob(job);
             if (job.type == Job.TypeMine) return BeginMineJob(job);
+            if (job.type == Job.TypeFetch) return BeginFetchJob(job);
 
             return false;
+        }
+
+        /// <summary>取货：走去仓库把东西拿出来，再送去给玩家。</summary>
+        private bool BeginFetchJob(Job job)
+        {
+            if (string.IsNullOrEmpty(job.fetchItemId)) return false;
+
+            var storage = StoragePoint.Instance;
+            if (storage == null) return false;
+
+            // 仓库里没货，别让他白跑一趟
+            if (storage.CountOf(job.fetchItemId) <= 0) return false;
+
+            // 背包里有别的东西挡着就先去清（比如上一单没送出去的）
+            if (BagTotal() > 0 && !BagHolds(job.fetchItemId))
+            {
+                _world.Jobs.Fail(job.id);
+                BeginDeliver();
+                return true;
+            }
+
+            _job = job;
+            job.workDone = 0f;
+            job.workRequired = 0f;
+
+            return BeginMoveToTarget(job.target);
         }
 
         /// <summary>建造：先看背包够不够，不够就去玩家那儿取。</summary>
@@ -301,6 +326,13 @@ namespace Guangzi.Runtime
 
             if (StepAlongPath()) return;
 
+            // 取货单走到仓库就算到了「取货点」，不需要站桩干活
+            if (_job.type == Job.TypeFetch)
+            {
+                PickupFromStorage();
+                return;
+            }
+
             _state = State.Working;
             _job.workDone = 0f;
         }
@@ -314,7 +346,86 @@ namespace Guangzi.Runtime
 
             if (task == PlayerTask.DeliverItems) DoDeliver();
             else if (task == PlayerTask.FetchBuildMaterials) DoFetchMaterials();
+            else if (task == PlayerTask.DeliverFetchedItems) DoDeliverFetched();
             else _state = State.Idle;
+        }
+
+        /// <summary>到了仓库：把货拿出来塞进包里，然后转去送货。</summary>
+        private void PickupFromStorage()
+        {
+            var job = _job;
+            if (job == null)
+            {
+                _state = State.Idle;
+                return;
+            }
+
+            var storage = StoragePoint.Instance;
+            var def = ResolveItem(job.fetchItemId);
+
+            if (storage == null || def == null)
+            {
+                FailJob(job);
+                return;
+            }
+
+            int got = storage.Take(job.fetchItemId, job.fetchAmount);
+            if (got <= 0)
+            {
+                FailJob(job);
+                return;
+            }
+
+            int added = _bag.Add(def, got);
+
+            // 装不下的退还给仓库，不能凭空消失
+            if (added < got) storage.Inventory.Add(def, got - added);
+
+            if (added <= 0)
+            {
+                FailJob(job);
+                return;
+            }
+
+            _playerTask = PlayerTask.DeliverFetchedItems;
+
+            if (!BeginGoToPlayer()) FailJob(job);
+        }
+
+        /// <summary>到了玩家身边：把取来的货交出去。</summary>
+        private void DoDeliverFetched()
+        {
+            var playerBag = GetPlayerInventory();
+
+            if (playerBag != null)
+            {
+                for (int i = 0; i < _bag.Capacity; i++)
+                {
+                    var stack = _bag.GetSlot(i);
+                    if (stack == null || stack.IsEmpty) continue;
+                    if (stack.Locked) continue;
+
+                    int added = playerBag.Add(stack.Def, stack.Amount);
+                    if (added > 0) _bag.Remove(stack.Def.id, added);
+                }
+            }
+
+            FinishJob(true);
+        }
+
+        /// <summary>背包里是不是这种物品。</summary>
+        private bool BagHolds(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId)) return false;
+
+            for (int i = 0; i < _bag.Capacity; i++)
+            {
+                var stack = _bag.GetSlot(i);
+                if (stack == null || stack.IsEmpty) continue;
+                if (stack.Def.id == itemId) return true;
+            }
+
+            return false;
         }
 
         /// <summary>沿路径走一步。返回 true = 还在路上，false = 到终点了。</summary>
@@ -403,6 +514,24 @@ namespace Guangzi.Runtime
             job.workRequired = buildSeconds;
 
             if (!BeginMoveToTarget(job.target)) FailJob(job);
+        }
+
+        /// <summary>
+        /// 让随从把身上这份东西直接交给玩家（面板上右键「获得」）。
+        /// 返回是否真的转过去了。
+        /// </summary>
+        public bool GiveItemToPlayer(ItemStack stack)
+        {
+            if (stack == null || stack.IsEmpty) return false;
+
+            var playerBag = GetPlayerInventory();
+            if (playerBag == null) return false;
+
+            int added = playerBag.Add(stack.Def, stack.Amount);
+            if (added <= 0) return false;
+
+            stack.Remove(added);
+            return true;
         }
 
         /// <summary>把背包里的东西倒回玩家背包。锁定的物品跳过，留在身上。</summary>
