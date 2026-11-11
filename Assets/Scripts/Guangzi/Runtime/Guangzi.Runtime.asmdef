@@ -1,0 +1,19 @@
+{
+    "name": "Guangzi.Runtime",
+    "rootNamespace": "Guangzi.Runtime",
+    "references": [
+        "Guangzi.Core",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

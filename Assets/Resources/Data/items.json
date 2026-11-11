@@ -1,0 +1,186 @@
+{
+  "items": [
+    {
+      "id": "wood",
+      "displayName": "木材",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#9C7042",
+      "nutrition": 0,
+      "sellPrice": 2
+    },
+    {
+      "id": "stone",
+      "displayName": "石料",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#8A8F94",
+      "nutrition": 0,
+      "sellPrice": 2
+    },
+    {
+      "id": "iron",
+      "displayName": "铁",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#B8BEC4",
+      "nutrition": 0,
+      "sellPrice": 8
+    },
+    {
+      "id": "silver",
+      "displayName": "白银",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#D8DEE6",
+      "nutrition": 0,
+      "sellPrice": 14
+    },
+    {
+      "id": "marble",
+      "displayName": "大理石",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#E6E2DA",
+      "nutrition": 0,
+      "sellPrice": 6
+    },
+    {
+      "id": "cloth",
+      "displayName": "布",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#C9BFA8",
+      "nutrition": 0,
+      "sellPrice": 5
+    },
+    {
+      "id": "wool",
+      "displayName": "羊毛",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#EDE6D6",
+      "nutrition": 0,
+      "sellPrice": 4
+    },
+    {
+      "id": "leather",
+      "displayName": "皮革",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#8B5A2B",
+      "nutrition": 0,
+      "sellPrice": 6
+    },
+    {
+      "id": "herb",
+      "displayName": "草药",
+      "category": "Medicine",
+      "maxStack": 50,
+      "color": "#5E9E4A",
+      "nutrition": 0,
+      "sellPrice": 5
+    },
+    {
+      "id": "wheat",
+      "displayName": "小麦",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#D9B44A",
+      "nutrition": 0,
+      "sellPrice": 3
+    },
+    {
+      "id": "flour",
+      "displayName": "面粉",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#EFE7D3",
+      "nutrition": 0,
+      "sellPrice": 6
+    },
+    {
+      "id": "wheat_seed",
+      "displayName": "小麦种子",
+      "category": "Buildable",
+      "maxStack": 100,
+      "color": "#B8A45E",
+      "nutrition": 0,
+      "sellPrice": 2
+    },
+    {
+      "id": "bread",
+      "displayName": "面包",
+      "category": "Food",
+      "maxStack": 30,
+      "color": "#C98B3E",
+      "nutrition": 25,
+      "sellPrice": 12
+    },
+    {
+      "id": "stone_brick",
+      "displayName": "石砖",
+      "category": "Buildable",
+      "maxStack": 75,
+      "color": "#7C838A",
+      "nutrition": 0,
+      "sellPrice": 4
+    },
+    {
+      "id": "wall_wood",
+      "displayName": "木墙",
+      "category": "Buildable",
+      "maxStack": 50,
+      "color": "#8B6239",
+      "nutrition": 0,
+      "sellPrice": 6
+    },
+    {
+      "id": "wood_block",
+      "displayName": "木块",
+      "category": "Buildable",
+      "maxStack": 75,
+      "color": "#A9763F",
+      "nutrition": 0,
+      "sellPrice": 3
+    },
+    {
+      "id": "wall_stone",
+      "displayName": "石墙",
+      "category": "Buildable",
+      "maxStack": 50,
+      "color": "#6F757B",
+      "nutrition": 0,
+      "sellPrice": 8
+    },
+    {
+      "id": "floor_stone",
+      "displayName": "石地板",
+      "category": "Buildable",
+      "maxStack": 50,
+      "color": "#5F656B",
+      "nutrition": 0,
+      "sellPrice": 4
+    },
+    {
+      "id": "iron_ore",
+      "displayName": "铁矿石",
+      "category": "Material",
+      "maxStack": 75,
+      "color": "#A08060",
+      "nutrition": 0,
+      "sellPrice": 10
+    },
+    {
+      "id": "stone_pickaxe",
+      "displayName": "石镐",
+      "category": "Tool",
+      "maxStack": 1,
+      "color": "#8A8F94",
+      "nutrition": 0,
+      "sellPrice": 20,
+      "toolTier": 2,
+      "miningBonus": 5
+    }
+  ]
+}

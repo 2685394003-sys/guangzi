@@ -1,0 +1,22 @@
+# Guangzi 代码规范开关
+# ------------------------------------------------------------
+# 改这个文件就能改规则，不用碰任何 C# 代码。
+# 格式：key=value，# 开头是注释，空行忽略。
+# 改完跑一次 ArchitectureTests 就生效。
+# ------------------------------------------------------------
+
+# 单个文件最多允许几个类型（同族值类型可以共处一个文件）
+maxTypesPerFile=3
+
+# Core 层绝对禁止出现的命名空间，逗号分隔。
+# 匹配 using 语句和全限定名；注释里的字眼不算（检查前会先剥注释）。
+forbiddenInCore=UnityEngine,UnityEditor,Unity.InputSystem
+
+# Runtime 层禁止出现的命名空间（编辑器代码请放 Editor/ 目录）
+forbiddenInRuntime=UnityEditor
+
+# 是否禁止 #region 指令
+forbidRegion=true
+
+# 是否要求 public 类型带 /// 摘要注释
+requireXmlDocOnPublicTypes=true
