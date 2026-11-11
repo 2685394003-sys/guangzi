@@ -1,37 +1,60 @@
+using System.Collections.Generic;
 using Guangzi.Core;
 using UnityEngine;
 
 namespace Guangzi.Runtime
 {
     /// <summary>
-    /// 仓库（storage）：一个存放物资的点，玩家从这里「叫货」让随从来取。
+    /// 木箱（chest）：场景里的容器，玩家可以把东西存进去，也可以从这里叫随从取货。
     ///
-    /// 现阶段还没有箱子建筑，先做成场景里一个固定点位（外观是一个方块）。
-    /// 以后换成真正的箱子/货架时，只要它还提供 Inventory + 格子位置这两样东西，
-    /// 随从的取货流程一行都不用改。
+    /// 「计入仓库」开关（includeInWarehouse）：勾上之后，这个箱子里的东西会**汇总**到
+    /// 仓库面板里显示。箱子被放下时默认就是勾上的（玩家要的就是「存进去就等于进仓库」），
+    /// 取消勾选就变成私房箱，只在打开它自己的时候看得到。
+    ///
+    /// 所有木箱都登记在 All 里，仓库面板靠它做汇总。
     /// </summary>
-    public class StoragePoint : MonoBehaviour
+    public class Chest : MonoBehaviour
     {
-        [SerializeField] private int capacity = 20;
+        /// <summary>场景里所有木箱。仓库面板遍历它做汇总。</summary>
+        public static readonly List<Chest> All = new List<Chest>();
+
+        [SerializeField] private int capacity = 15;
 
         [Header("初始物资")]
         [SerializeField] private string[] starterItemIds = { "bread", "stone_brick", "wood_block" };
         [SerializeField] private int[] starterAmounts = { 20, 20, 20 };
 
+        [Header("仓库登记")]
+        [Tooltip("勾上后，箱子里的东西会统计到仓库面板里。放下箱子时默认打开")]
+        [SerializeField] private bool includeInWarehouse = true;
+
         [Header("外观")]
-        [Tooltip("用来做占位视觉的方块，留空则不生成")]
         [SerializeField] private bool buildVisual = true;
         [SerializeField] private Color visualColor = new Color(0.46f, 0.33f, 0.20f, 1f);
 
-        public static StoragePoint Instance { get; private set; }
-
         public Inventory Inventory { get; private set; }
+
+        /// <summary>这个箱子的内容是否计入仓库。</summary>
+        public bool IncludeInWarehouse
+        {
+            get => includeInWarehouse;
+            set => includeInWarehouse = value;
+        }
 
         private void Awake()
         {
-            Instance = this;
             EnsureStorage();
             BuildVisual();
+        }
+
+        private void OnEnable()
+        {
+            if (!All.Contains(this)) All.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            All.Remove(this);
         }
 
         private void EnsureStorage()
@@ -93,14 +116,25 @@ namespace Guangzi.Runtime
             }
         }
 
-        /// <summary>仓库里现在有多少这个物品。</summary>
+        /// <summary>找出落在某格上的木箱（随从取货按任务里的坐标找）。</summary>
+        public static Chest FindAt(GridPos cell)
+        {
+            for (int i = 0; i < All.Count; i++)
+            {
+                var chest = All[i];
+                if (chest != null && chest.Cell.Equals(cell)) return chest;
+            }
+
+            return null;
+        }
+
         public int CountOf(string itemId)
         {
             EnsureStorage();
             return Inventory != null ? Inventory.CountOf(itemId) : 0;
         }
 
-        /// <summary>取出若干（给随从取货用），返回实际取到的数量。</summary>
+        /// <summary>取出若干（随从取货用），返回实际取到的数量。</summary>
         public int Take(string itemId, int amount)
         {
             EnsureStorage();
@@ -112,5 +146,14 @@ namespace Guangzi.Runtime
 
             return Inventory.Remove(itemId, take);
         }
+
+        /// <summary>
+        /// 汇总：这个箱子里某物品的数量（只有勾选「计入仓库」才有意义）。
+        /// </summary>
+        public int CountForWarehouse(string itemId)
+        {
+            return includeInWarehouse ? CountOf(itemId) : 0;
+        }
     }
 }
+

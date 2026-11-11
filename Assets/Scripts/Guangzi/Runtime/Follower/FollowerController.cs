@@ -188,16 +188,16 @@ namespace Guangzi.Runtime
             return false;
         }
 
-        /// <summary>取货：走去仓库把东西拿出来，再送去给玩家。</summary>
+        /// <summary>取货：走去木箱把东西拿出来，再送去给玩家。</summary>
         private bool BeginFetchJob(Job job)
         {
             if (string.IsNullOrEmpty(job.fetchItemId)) return false;
 
-            var storage = StoragePoint.Instance;
-            if (storage == null) return false;
+            var chest = Chest.FindAt(job.target);
+            if (chest == null) return false;
 
-            // 仓库里没货，别让他白跑一趟
-            if (storage.CountOf(job.fetchItemId) <= 0) return false;
+            // 箱子里没货，别让他白跑一趟
+            if (chest.CountOf(job.fetchItemId) <= 0) return false;
 
             // 背包里有别的东西挡着就先去清（比如上一单没送出去的）
             if (BagTotal() > 0 && !BagHolds(job.fetchItemId))
@@ -360,16 +360,16 @@ namespace Guangzi.Runtime
                 return;
             }
 
-            var storage = StoragePoint.Instance;
+            var chest = Chest.FindAt(job.target);
             var def = ResolveItem(job.fetchItemId);
 
-            if (storage == null || def == null)
+            if (chest == null || def == null)
             {
                 FailJob(job);
                 return;
             }
 
-            int got = storage.Take(job.fetchItemId, job.fetchAmount);
+            int got = chest.Take(job.fetchItemId, job.fetchAmount);
             if (got <= 0)
             {
                 FailJob(job);
@@ -378,8 +378,8 @@ namespace Guangzi.Runtime
 
             int added = _bag.Add(def, got);
 
-            // 装不下的退还给仓库，不能凭空消失
-            if (added < got) storage.Inventory.Add(def, got - added);
+            // 装不下的退还给箱子，不能凭空消失
+            if (added < got) chest.Inventory.Add(def, got - added);
 
             if (added <= 0)
             {
