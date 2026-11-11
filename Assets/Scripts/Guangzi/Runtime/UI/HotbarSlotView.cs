@@ -18,6 +18,19 @@ namespace Guangzi.Runtime
         public void Refresh(ItemStack stack)
         {
             bool hasItem = stack != null && !stack.IsEmpty;
+            Refresh(stack != null ? stack.Def : null, hasItem ? stack.Amount : 0);
+        }
+
+        /// <summary>
+        /// 直接给定义 + 数量。
+        ///
+        /// 汇总视图（仓库）要用这个：同一件物品可能分散在多个箱子里，
+        /// 合起来的总量会超过单堆上限（比如面包 40 个但上限 20），
+        /// 用 ItemStack 装会被截断成 20，所以绕开它直接画。
+        /// </summary>
+        public void Refresh(ItemDef def, int amount)
+        {
+            bool hasItem = def != null && amount > 0;
 
             if (icon != null)
             {
@@ -26,7 +39,7 @@ namespace Guangzi.Runtime
                 if (hasItem)
                 {
                     Color color;
-                    if (ColorUtility.TryParseHtmlString(stack.Def.colorHex, out color))
+                    if (ColorUtility.TryParseHtmlString(def.colorHex, out color))
                     {
                         icon.color = color;
                     }
@@ -36,7 +49,7 @@ namespace Guangzi.Runtime
             if (countLabel != null)
             {
                 // 数量为 1 时不显示数字，和星露谷/我的世界一致
-                countLabel.text = hasItem && stack.Amount > 1 ? stack.Amount.ToString() : string.Empty;
+                countLabel.text = hasItem && amount > 1 ? amount.ToString() : string.Empty;
             }
         }
 
