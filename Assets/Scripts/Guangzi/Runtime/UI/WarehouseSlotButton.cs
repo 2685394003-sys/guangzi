@@ -7,12 +7,12 @@ namespace Guangzi.Runtime
     /// <summary>
     /// 仓库格子的点击处理器。
     ///
-    /// 左键不再直接选中，而是弹出物品菜单（选中 / 获取 / 聚焦）——
-    /// 仓库里的东西可能散在箱子或随从身上，玩家需要一个入口跳过去看。
+    /// 左键 = 选中（建造选物），和快捷栏保持一致；
+    /// 右键 = 弹物品菜单（选中 / 获取 / 聚焦）。
     ///
-    /// 位置必须从 PointerEventData 里拿，不能用 Button.onClick：
-    /// Button 的回调不带坐标，只能事后去读 Mouse.current，
-    /// 那一读可能已经是下一帧的位置，菜单就会弹到别处去。
+    /// 全项目统一这套：左键干活，右键开菜单。
+    /// 位置只能从 PointerEventData 里拿——Button.onClick 不带坐标，
+    /// 事后读鼠标可能已经是下一帧的位置，菜单会弹到别处。
     /// </summary>
     [RequireComponent(typeof(Button))]
     public class WarehouseSlotButton : MonoBehaviour, IPointerClickHandler
@@ -21,10 +21,31 @@ namespace Guangzi.Runtime
         [SerializeField] private WarehouseItemMenu menu;
         [SerializeField] private int index;
 
+        private Button _button;
+
+        private void Awake()
+        {
+            _button = GetComponent<Button>();
+            if (_button != null) _button.onClick.AddListener(OnLeftClicked);
+        }
+
+        private void OnDestroy()
+        {
+            if (_button != null) _button.onClick.RemoveListener(OnLeftClicked);
+        }
+
+        private void OnLeftClicked()
+        {
+            if (warehouse == null) warehouse = FindFirstObjectByType<WarehouseWindow>();
+            if (warehouse == null) return;
+
+            warehouse.SelectSlot(index);
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
-            // 只处理左键。右键留给别的用途（目前没有，先挡住）
-            if (eventData.button != PointerEventData.InputButton.Left) return;
+            // 只接右键。左键走 Button.onClick，两套互不干扰
+            if (eventData.button != PointerEventData.InputButton.Right) return;
 
             if (warehouse == null) warehouse = FindFirstObjectByType<WarehouseWindow>();
             if (warehouse == null) return;
@@ -34,14 +55,10 @@ namespace Guangzi.Runtime
 
             if (menu == null) menu = FindFirstObjectByType<WarehouseItemMenu>();
 
-            if (menu != null)
-            {
-                menu.Show(itemId, index, eventData.position);
-                return;
-            }
+            // 没配菜单就没得弹，右键当作无操作
+            if (menu == null) return;
 
-            // 没配菜单就退回老行为（直接选中）
-            warehouse.SelectSlot(index);
+            menu.Show(itemId, index, eventData.position);
         }
 
         public void Initialize(WarehouseWindow owner, int slotIndex)
