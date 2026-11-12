@@ -79,7 +79,7 @@ namespace Guangzi.Runtime
         }
 
         /// <summary>右键格子：弹出物品操作菜单。</summary>
-        private void OnSlotRightClicked(int index)
+        private void OnSlotRightClicked(int index, Vector2 screenPosition)
         {
             if (contextMenu == null) return;
             if (follower == null || follower.Bag == null) return;
@@ -87,10 +87,7 @@ namespace Guangzi.Runtime
             var stack = follower.Bag.GetSlot(index);
             if (stack == null || stack.IsEmpty) return;
 
-            var mouse = Mouse.current;
-            if (mouse == null) return;
-
-            contextMenu.Show(stack, follower, mouse.position.ReadValue());
+            contextMenu.Show(stack, follower, screenPosition);
         }
 
         private void OnDestroy()

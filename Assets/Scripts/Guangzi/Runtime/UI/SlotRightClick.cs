@@ -14,7 +14,13 @@ namespace Guangzi.Runtime
     {
         [SerializeField] private int index;
 
-        public event Action<int> RightClicked;
+        /// <summary>
+        /// 右键回调：格子下标 + **点击那一刻的屏幕坐标**。
+        ///
+        /// 坐标必须从事件里拿，不能用 Mouse.current 去读当前位置——
+        /// 两者不一定同帧，读出来的可能是上一个位置，菜单就会弹到别处。
+        /// </summary>
+        public event Action<int, Vector2> RightClicked;
 
         public int Index => index;
 
@@ -27,7 +33,7 @@ namespace Guangzi.Runtime
         {
             if (eventData.button != PointerEventData.InputButton.Right) return;
 
-            RightClicked?.Invoke(index);
+            RightClicked?.Invoke(index, eventData.position);
         }
     }
 }

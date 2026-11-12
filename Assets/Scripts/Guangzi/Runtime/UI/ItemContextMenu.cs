@@ -83,6 +83,11 @@ namespace Guangzi.Runtime
             if (blocker != null) blocker.SetActive(true);
             if (root == null) return;
 
+            // 整个菜单对象提到 Canvas 最上层。
+            // 只对 root 调 SetAsLastSibling 只能在自己父级里排——
+            // 木箱面板排在菜单后面，会把菜单整块盖住，只露出边上一小条。
+            transform.SetAsLastSibling();
+
             root.SetActive(true);
             root.transform.SetAsLastSibling();
 
