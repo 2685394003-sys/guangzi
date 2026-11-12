@@ -76,7 +76,12 @@ namespace Guangzi.Runtime
         [SerializeField] private bool centerOnMapAtStart = true;
 
         private Vector3 _pivot;
-        private Camera _camera;
+
+        [Tooltip("聚焦飞行速度，越大越快")]
+        [SerializeField] private float focusSmooth = 6f;
+
+        /// <summary>镜头正在飞向的目标（无值 = 没在飞）</summary>
+        private Vector3? _focusTarget;        private Camera _camera;
         private CameraViewMode _viewMode;
 
         // 切到角色视角前，把上帝视角的构图记下来，切回来还原
@@ -223,7 +228,13 @@ namespace Guangzi.Runtime
             // 滚轮缩放在两种视角下都能用——看远看近是通用需求
             HandleZoom();
 
-            if (_viewMode == CameraViewMode.Character)
+            // 聚焦飞行优先：这时候不能同时跟随玩家或响应拖动，
+            // 否则目标位置会被每帧覆盖，镜头会抖
+            if (_focusTarget.HasValue)
+            {
+                UpdateFocus();
+            }
+            else if (_viewMode == CameraViewMode.Character)
             {
                 FollowTarget();
             }
@@ -334,14 +345,52 @@ namespace Guangzi.Runtime
             transform.SetPositionAndRotation(position, rotation);
         }
 
-        /// <summary>提供给工具的接口：把相机对准某个格。</summary>
+        /// <summary>提供给工具的接口：把相机对准某个格。默认平滑飞过去。</summary>
         public void FocusOn(GridPos pos)
+        {
+            FocusOn(pos, true);
+        }
+
+        /// <summary>
+        /// 对准某个格。
+        /// smooth = false 时瞬间到位（初始化、读档用）；
+        /// smooth = true 时留一个目标，由 UpdateFocus 逐帧插值过去，
+        /// 这样玩家能看到镜头移动的过程，不至于晕头转向。
+        /// </summary>
+        public void FocusOn(GridPos pos, bool smooth)
         {
             var world = GridWorld.Instance;
             if (world == null) return;
 
-            _pivot = world.GridToWorldCenter(pos);
-            Apply();
+            var target = world.GridToWorldCenter(pos);
+
+            if (!smooth)
+            {
+                _pivot = target;
+                _focusTarget = null;
+                Apply();
+                return;
+            }
+
+            _focusTarget = target;
+        }
+
+        /// <summary>镜头飞行的目标。有值就说明还在路上。</summary>
+        public bool IsFocusing => _focusTarget.HasValue;
+
+        private void UpdateFocus()
+        {
+            if (!_focusTarget.HasValue) return;
+
+            float t = 1f - Mathf.Exp(-focusSmooth * Time.deltaTime);
+            _pivot = Vector3.Lerp(_pivot, _focusTarget.Value, t);
+
+            // 足够近就吸附并结束，避免永远差一点点
+            if (Vector3.Distance(_pivot, _focusTarget.Value) < 0.02f)
+            {
+                _pivot = _focusTarget.Value;
+                _focusTarget = null;
+            }
         }
     }
 }

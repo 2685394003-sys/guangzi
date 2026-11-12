@@ -169,6 +169,13 @@ namespace Guangzi.Runtime
             windowRect.anchoredPosition = Vector2.zero;
         }
 
+        /// <summary>取某个格子（**过滤后**的下标）当前显示的物品 id。空格返回 null。</summary>
+        public string GetItemIdAt(int index)
+        {
+            if (index < 0 || index >= _defs.Count) return null;
+            return _defs[index].id;
+        }
+
         /// <summary>点格子：选中它；再点同一个就取消。index 是**过滤后**的下标。</summary>
         public void SelectSlot(int index)
         {
