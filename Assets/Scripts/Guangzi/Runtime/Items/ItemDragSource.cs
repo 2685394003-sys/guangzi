@@ -96,8 +96,23 @@ namespace Guangzi.Runtime
             _ghostRect.gameObject.SetActive(true);
             _ghostRect.SetAsLastSibling();
 
-            Color color;
-            if (ColorUtility.TryParseHtmlString(stack.Def.colorHex, out color)) dragGhost.color = color;
+            // 拖拽幽灵优先用正式图标；没有才退回色块。
+            // 贴图时必须把颜色刷白，否则会被上一次的色块颜色染色。
+            var sprite = ItemIconLibrary.Resolve(stack.Def);
+
+            if (sprite != null)
+            {
+                dragGhost.sprite = sprite;
+                dragGhost.color = Color.white;
+                dragGhost.preserveAspect = true;
+            }
+            else
+            {
+                dragGhost.sprite = null;
+
+                Color color;
+                if (ColorUtility.TryParseHtmlString(stack.Def.colorHex, out color)) dragGhost.color = color;
+            }
 
             MoveGhost(eventData.position);
         }
