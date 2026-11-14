@@ -38,10 +38,24 @@ namespace Guangzi.Runtime
 
                 if (hasItem)
                 {
-                    Color color;
-                    if (ColorUtility.TryParseHtmlString(def.colorHex, out color))
+                    // 有正式图标就贴图；没有才退回色块。
+                    // 贴图时必须把颜色刷成白色，否则会被上一次的色块颜色染上。
+                    var sprite = ItemIconLibrary.Resolve(def);
+
+                    if (sprite != null)
                     {
-                        icon.color = color;
+                        icon.sprite = sprite;
+                        icon.color = Color.white;
+                    }
+                    else
+                    {
+                        icon.sprite = null;
+
+                        Color color;
+                        if (ColorUtility.TryParseHtmlString(def.colorHex, out color))
+                        {
+                            icon.color = color;
+                        }
                     }
                 }
             }

@@ -77,7 +77,8 @@ namespace Guangzi.Runtime
                     json.nutrition,
                     json.sellPrice,
                     json.toolTier,
-                    json.miningBonus);
+                    json.miningBonus,
+                    json.icon);
 
                 if (Catalog.Register(def)) loaded++;
                 else
@@ -119,6 +120,9 @@ namespace Guangzi.Runtime
             public int sellPrice;
             public int toolTier;
             public float miningBonus;
+
+            /// <summary>图标资源名，对应 Resources/Icons/Items/&lt;icon&gt;.png</summary>
+            public string icon;
         }
     }
 }

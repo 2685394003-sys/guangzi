@@ -7,7 +7,8 @@
       "maxStack": 20,
       "color": "#D9A24A",
       "nutrition": 35,
-      "sellPrice": 6
+      "sellPrice": 6,
+      "icon": "bread"
     },
     {
       "id": "wood",
@@ -118,15 +119,6 @@
       "sellPrice": 2
     },
     {
-      "id": "bread",
-      "displayName": "面包",
-      "category": "Food",
-      "maxStack": 30,
-      "color": "#C98B3E",
-      "nutrition": 25,
-      "sellPrice": 12
-    },
-    {
       "id": "stone_brick",
       "displayName": "石砖",
       "category": "Buildable",
@@ -190,6 +182,90 @@
       "sellPrice": 20,
       "toolTier": 2,
       "miningBonus": 5
+    },
+    {
+      "id": "perfect_breakfast",
+      "displayName": "完美早餐",
+      "category": "Food",
+      "color": "#E8B84B",
+      "maxStack": 10,
+      "nutrition": 60,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "perfect_breakfast"
+    },
+    {
+      "id": "pasta",
+      "displayName": "意大利面",
+      "category": "Food",
+      "color": "#C4553D",
+      "maxStack": 10,
+      "nutrition": 50,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "pasta"
+    },
+    {
+      "id": "pizza",
+      "displayName": "披萨",
+      "category": "Food",
+      "color": "#D9753A",
+      "maxStack": 10,
+      "nutrition": 45,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "pizza"
+    },
+    {
+      "id": "salad",
+      "displayName": "沙拉",
+      "category": "Food",
+      "color": "#6FA84A",
+      "maxStack": 10,
+      "nutrition": 30,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "salad"
+    },
+    {
+      "id": "fried_egg",
+      "displayName": "煎鸡蛋",
+      "category": "Food",
+      "color": "#F0C050",
+      "maxStack": 20,
+      "nutrition": 20,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "fried_egg"
+    },
+    {
+      "id": "blueberry_pie",
+      "displayName": "蓝莓千层酥",
+      "category": "Food",
+      "color": "#7A5FA8",
+      "maxStack": 20,
+      "nutrition": 35,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "blueberry_pie"
+    },
+    {
+      "id": "pancake",
+      "displayName": "薄煎饼",
+      "category": "Food",
+      "color": "#C98B3E",
+      "maxStack": 20,
+      "nutrition": 30,
+      "sellPrice": 0,
+      "toolTier": 0,
+      "miningBonus": 0.0,
+      "icon": "pancake"
     }
   ]
 }

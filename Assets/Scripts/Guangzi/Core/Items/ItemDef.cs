@@ -16,8 +16,15 @@ namespace Guangzi.Core
         /// <summary>单个堆栈上限。飞书要求「物品堆叠上限」，这里是唯一来源。</summary>
         public readonly int maxStack;
 
-        /// <summary>占位图标颜色，形如 "#9C7042"。正式版换成图集索引。</summary>
+        /// <summary>占位图标颜色，形如 "#9C7042"。没有正式图标时用它画色块。</summary>
         public readonly string colorHex;
+
+        /// <summary>
+        /// 图标资源名（Resources/Icons/Items 下的文件名，不带扩展）。
+        /// 空表示还没出图，表现层退回 colorHex 色块。
+        /// 存名字而不是 Sprite 引用，是为了让 Core 继续不依赖 Unity 资源系统。
+        /// </summary>
+        public readonly string icon;
 
         /// <summary>营养值。> 0 表示可食用，吃一个恢复这么多饥饿。</summary>
         public readonly int nutrition;
@@ -42,7 +49,8 @@ namespace Guangzi.Core
             int nutrition = 0,
             int sellPrice = 0,
             int toolTier = 0,
-            float miningBonus = 0f)
+            float miningBonus = 0f,
+            string icon = null)
         {
             this.id = id;
             this.displayName = displayName;
@@ -53,7 +61,11 @@ namespace Guangzi.Core
             this.sellPrice = sellPrice;
             this.toolTier = toolTier;
             this.miningBonus = miningBonus;
+            this.icon = icon;
         }
+
+        /// <summary>有没有正式图标。没有就得退回色块。</summary>
+        public bool HasIcon => !string.IsNullOrEmpty(icon);
 
         public bool IsFood => nutrition > 0;
 
